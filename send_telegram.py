@@ -17,6 +17,9 @@ import logging
 import os
 from datetime import datetime
 
+from dotenv import load_dotenv
+load_dotenv()  # legge TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID dal file .env, se presente
+
 import requests
 
 logging.basicConfig(

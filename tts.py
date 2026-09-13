@@ -83,6 +83,10 @@ def genera_audio(testo, percorso_wav=None, percorso_ogg=None):
         config.PIPER_EXECUTABLE,
         "--model", config.PIPER_MODEL_PATH,
         "--output_file", percorso_wav,
+        "--noise-scale", str(config.PIPER_NOISE_SCALE),
+        "--length-scale", str(config.PIPER_LENGTH_SCALE),
+        "--noise-w", str(config.PIPER_NOISE_W),
+        "--sentence-silence", str(config.PIPER_SENTENCE_SILENCE),
     ]
     risultato = subprocess.run(
         comando_piper, input=testo, text=True, capture_output=True

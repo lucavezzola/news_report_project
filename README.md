@@ -49,10 +49,10 @@ Poi apri `.env` e inserisci:
 
 ### 4. Setup Piper (TTS locale)
 
-1. Scarica il binario Piper per Windows dalla [pagina release ufficiale](https://github.com/rhasspy/piper/releases).
+1. Scarica il binario Piper per Windows dalla [pagina release ufficiale](https://github.com/rhasspy/piper/releases) e metti la cartella `piper/` nella root del progetto.
 2. Scarica una voce italiana pre-addestrata (es. `it_IT-riccardo-x_low` o `it_IT-paola-medium`) dal repository [rhasspy/piper-voices su Hugging Face](https://huggingface.co/rhasspy/piper-voices/tree/main/it/it_IT) — servono entrambi i file `.onnx` e `.onnx.json`.
-3. Metti i file scaricati in una cartella `piper_models/` dentro il progetto (o aggiorna il percorso in `config.py` → `PIPER_MODEL_PATH`).
-4. Assicurati che l'eseguibile `piper.exe` sia raggiungibile: o aggiungilo al PATH di sistema, o imposta il percorso assoluto in `config.py` → `PIPER_EXECUTABLE`.
+3. Metti i file scaricati in una cartella `piper_models/` dentro `piper/`.
+4. Assicurati che l'eseguibile `piper.exe` sia raggiungibile: imposta il percorso assoluto in `config.py` → `PIPER_EXECUTABLE`.
 5. Installa **ffmpeg** (serve per convertire il wav in ogg) — [ffmpeg.org](https://ffmpeg.org/download.html), aggiungilo al PATH.
 
 ## Test fase per fase (consigliato, come da roadmap)

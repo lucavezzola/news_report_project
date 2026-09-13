@@ -18,6 +18,10 @@ Uso da main.py:
 import json
 import logging
 import os
+from datetime import datetime
+
+from dotenv import load_dotenv
+load_dotenv()  # legge ANTHROPIC_API_KEY dal file .env, se presente
 
 import anthropic
 
@@ -47,10 +51,16 @@ FORMATO DI OUTPUT (fondamentale, perché il testo verrà letto da un sintetizzat
 - Scrivi in prosa parlata: frasi brevi e scorrevoli, come se un giornalista radiofonico stesse leggendo in diretta.
 - NIENTE markdown, NIENTE elenchi puntati, NIENTE asterischi o simboli. Solo testo continuo.
 - Organizza il contenuto nelle sezioni, in quest'ordine: Italia, Esteri, Economia, Tecnologia.
-- Apri ogni sezione con una breve frase di transizione naturale (es. "Passiamo all'economia.").
+- IMPORTANTE: non scrivere mai il nome di una sezione da solo, isolato, come fosse un titolo (es. non scrivere mai semplicemente "ITALIA" o "Italia" su una riga a sé). Il testo deve essere prosa continua dall'inizio alla fine: ogni sezione, compresa la prima, deve iniziare con una frase parlata completa che introduce l'argomento, con la punteggiatura giusta (es. "Iniziamo dall'Italia." oppure "Passiamo all'economia."). Questo serve anche a creare una pausa naturale tra una sezione e l'altra quando il testo viene letto dal sintetizzatore vocale, che pausa in corrispondenza dei punti, non delle interruzioni di riga.
 - Se una sezione non ha notizie rilevanti quel giorno, salta la sezione senza commentarlo (non dire "oggi non ci sono notizie").
 - Apri il resoconto con un brevissimo saluto e la data, chiudi con un breve commiato.
+- La data di oggi ti verrà fornita esplicitamente nel messaggio dell'utente: usa esattamente quella, non calcolarla né dedurla da altre informazioni (articoli, training, ecc.).
 - Non inventare fatti non presenti negli articoli forniti. Se le informazioni sono scarse su un argomento, sii sintetico piuttosto che aggiungere dettagli non verificati.
+
+TRASCRIZIONE FONETICA DI NOMI E PAROLE STRANIERE (fondamentale, perché il sintetizzatore vocale legge tutto con le regole di pronuncia italiane, anche i nomi stranieri):
+- Il sintetizzatore vocale non sa che una parola è inglese, francese, ecc.: la leggerà sillabandola secondo le regole italiane, producendo una pronuncia sbagliata o incomprensibile per nomi propri e termini stranieri.
+- Per ogni nome proprio straniero (persone, aziende, luoghi) o termine tecnico straniero che useresti normalmente, sostituiscilo nel testo con una trascrizione fonetica approssimata, scritta usando le regole ortografiche italiane, che si avvicini alla pronuncia originale quando letta "all'italiana". Esempi: "Washington" -> "Uascington", "WeChat" -> "Uiciat", "Musk" -> "Mask", "software" -> "sofuer", "AI" (sigla inglese) -> "ei ai".
+- Non aggiungere note, parentesi o spiegazioni sulla trascrizione: scrivi solo la forma finale che deve essere letta, come se fosse la grafia normale della parola.
 """
 
 
@@ -76,6 +86,18 @@ def _prepara_input_utente(articoli):
     return "\n".join(blocchi)
 
 
+GIORNI_IT = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
+MESI_IT = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+           "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
+
+
+def _data_italiana_oggi():
+    """Restituisce la data odierna formattata in italiano (es. 'domenica 13 settembre 2026'),
+    senza dipendere da locale di sistema (spesso non configurato in italiano su Windows)."""
+    oggi = datetime.now()
+    return f"{GIORNI_IT[oggi.weekday()]} {oggi.day} {MESI_IT[oggi.month - 1]} {oggi.year}"
+
+
 def sintetizza(articoli, model=None):
     """Chiama Claude API e restituisce il testo della rassegna pronto per il TTS."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -94,6 +116,8 @@ def sintetizza(articoli, model=None):
 
     log.info(f"Invio {len(articoli)} articoli a Claude ({model}) per la sintesi...")
 
+    data_oggi = _data_italiana_oggi()
+
     response = client.messages.create(
         model=model,
         max_tokens=4000,
@@ -102,6 +126,8 @@ def sintetizza(articoli, model=None):
             {
                 "role": "user",
                 "content": (
+                    f"Oggi è {data_oggi}. Usa questa data esatta nel saluto di apertura "
+                    "(non calcolarla o dedurla in altro modo).\n\n"
                     "Ecco gli articoli raccolti oggi, raggruppati per sezione. "
                     "Scrivi il resoconto seguendo tutte le regole del system prompt.\n"
                     + input_utente

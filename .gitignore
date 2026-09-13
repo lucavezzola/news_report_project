@@ -1,3 +1,5 @@
 .env
 output/
 logs/
+piper/
+__pycache__/
