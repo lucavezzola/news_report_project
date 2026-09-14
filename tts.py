@@ -73,8 +73,8 @@ def genera_audio(testo, percorso_wav=None, percorso_ogg=None):
     if not testo or not testo.strip():
         raise ValueError("Testo vuoto: niente da sintetizzare.")
 
-    percorso_wav = percorso_wav or config.FILE_AUDIO_WAV
-    percorso_ogg = percorso_ogg or config.FILE_AUDIO_OGG
+    percorso_wav = str(percorso_wav or config.FILE_AUDIO_WAV)
+    percorso_ogg = str(percorso_ogg or config.FILE_AUDIO_OGG)
 
     _verifica_prerequisiti()
 
@@ -88,21 +88,41 @@ def genera_audio(testo, percorso_wav=None, percorso_ogg=None):
         "--noise-w", str(config.PIPER_NOISE_W),
         "--sentence-silence", str(config.PIPER_SENTENCE_SILENCE),
     ]
-    risultato = subprocess.run(
-        comando_piper, input=testo, text=True, capture_output=True
-    )
+    try:
+        risultato = subprocess.run(
+            comando_piper,
+            input=testo,
+            text=True,
+            capture_output=True,
+            timeout=180,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("Piper ha impiegato troppo tempo per sintetizzare l'audio.") from exc
     if risultato.returncode != 0:
         log.error(f"Piper ha restituito errore: {risultato.stderr}")
         raise RuntimeError(f"Errore Piper: {risultato.stderr}")
 
     log.info(f"Converto in ogg (bitrate leggero) -> {percorso_ogg}")
     comando_ffmpeg = [
-        "ffmpeg", "-y",
+        "ffmpeg", "-y", "-nostdin",
+        "-hide_banner",
+        "-loglevel", "error",
         "-i", percorso_wav,
         "-c:a", "libopus", "-b:a", "32k",
         percorso_ogg,
     ]
-    risultato = subprocess.run(comando_ffmpeg, capture_output=True, text=True)
+    try:
+        risultato = subprocess.run(
+            comando_ffmpeg,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError("ffmpeg ha impiegato troppo tempo per convertire l'audio.") from exc
     if risultato.returncode != 0:
         log.error(f"ffmpeg ha restituito errore: {risultato.stderr}")
         raise RuntimeError(f"Errore ffmpeg: {risultato.stderr}")
@@ -112,8 +132,47 @@ def genera_audio(testo, percorso_wav=None, percorso_ogg=None):
 
 
 if __name__ == "__main__":
-    with open(config.FILE_TESTO_SINTESI, encoding="utf-8") as f:
-        testo = f.read()
+    import argparse
+    from pathlib import Path
 
-    percorso = genera_audio(testo)
-    print(f"Audio generato: {percorso}")
+    parser = argparse.ArgumentParser(description="Sintetizza l'audio di una o più sezioni della rassegna.")
+    parser.add_argument(
+        "--sezione",
+        default="all",
+        help="Nome della sezione da sintetizzare (Italia, Esteri, Economia, Tecnologia) oppure 'all' per tutte."
+    )
+    parser.add_argument("--testo", help="Percorso opzionale a un file di testo alternativo da usare invece delle sezioni standard.")
+    parser.add_argument("--wav", help="Percorso del file WAV di output. Usato solo con una singola sezione.")
+    parser.add_argument("--ogg", help="Percorso del file OGG di output. Usato solo con una singola sezione.")
+    args = parser.parse_args()
+
+    if args.testo:
+        with open(args.testo, encoding="utf-8") as f:
+            testo = f.read()
+        percorso_wav = args.wav or config.FILE_AUDIO_WAV
+        percorso_ogg = args.ogg or config.FILE_AUDIO_OGG
+        percorso = genera_audio(testo, percorso_wav, percorso_ogg)
+        print(f"Audio generato da file personalizzato: {percorso}")
+        raise SystemExit(0)
+
+    sezioni = config.SEZIONI if args.sezione == "all" else [args.sezione]
+    if len(sezioni) > 1 and (args.wav or args.ogg):
+        raise ValueError("--wav e --ogg possono essere usati solo con una singola sezione. In modalità 'all' il percorso viene generato automaticamente per ogni sezione.")
+
+    for nome_sezione in sezioni:
+        percorso_testo = config.percorso_testo_sezione(nome_sezione)
+        if not Path(percorso_testo).exists():
+            log.warning(
+                "File testo non trovato per la sezione '%s': %s. Salto la sezione.",
+                nome_sezione,
+                percorso_testo,
+            )
+            continue
+
+        with open(percorso_testo, encoding="utf-8") as f:
+            testo = f.read()
+
+        percorso_wav = args.wav or config.percorso_audio_wav_sezione(nome_sezione)
+        percorso_ogg = args.ogg or config.percorso_audio_ogg_sezione(nome_sezione)
+        percorso = genera_audio(testo, percorso_wav, percorso_ogg)
+        print(f"Audio generato per sezione '{nome_sezione}': {percorso}")

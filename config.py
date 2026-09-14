@@ -97,6 +97,11 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 DIR_OUTPUT = "output"
 FILE_JSON_GREZZO = "output/articoli_grezzi.json"
 
+# Compatibilità con vecchi script/entry point:
+FILE_TESTO_SINTESI = "output/testo_sintesi.txt"
+FILE_AUDIO_WAV = "output/audio.wav"
+FILE_AUDIO_OGG = "output/audio.ogg"
+
 
 def percorso_testo_sezione(nome_sezione):
     return f"output/testo_{nome_sezione}.txt"

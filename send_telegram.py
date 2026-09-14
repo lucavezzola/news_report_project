@@ -65,5 +65,27 @@ def invia_audio(percorso_audio, didascalia=None):
 
 
 if __name__ == "__main__":
+    import argparse
+    from pathlib import Path
     import config
-    invia_audio(config.FILE_AUDIO_OGG)
+
+    parser = argparse.ArgumentParser(description="Invia un audio o tutte le sezioni della rassegna su Telegram.")
+    parser.add_argument(
+        "--sezione",
+        default="all",
+        help="Sezione da inviare (Italia, Esteri, Economia, Tecnologia) oppure 'all' per tutte."
+    )
+    args = parser.parse_args()
+
+    sezioni = config.SEZIONI if args.sezione == "all" else [args.sezione]
+    for nome_sezione in sezioni:
+        percorso = config.percorso_audio_ogg_sezione(nome_sezione)
+        if not Path(percorso).exists():
+            log.warning(
+                "Audio non trovato per la sezione '%s': %s. Salto la sezione.",
+                nome_sezione,
+                percorso,
+            )
+            continue
+
+        invia_audio(percorso, didascalia=f"{nome_sezione} — {datetime.now().strftime('%d/%m/%Y')}")
