@@ -96,9 +96,18 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 # Percorsi file
 DIR_OUTPUT = "output"
 FILE_JSON_GREZZO = "output/articoli_grezzi.json"
-FILE_TESTO_SINTESI = "output/rassegna_testo.txt"
-FILE_AUDIO_WAV = "output/rassegna.wav"
-FILE_AUDIO_OGG = "output/rassegna.ogg"
+
+
+def percorso_testo_sezione(nome_sezione):
+    return f"output/testo_{nome_sezione}.txt"
+
+
+def percorso_audio_wav_sezione(nome_sezione):
+    return f"output/audio_{nome_sezione}.wav"
+
+
+def percorso_audio_ogg_sezione(nome_sezione):
+    return f"output/audio_{nome_sezione}.ogg"
 
 # Piper TTS — percorso del modello vocale italiano (scaricalo separatamente,
 # vedi README.md sezione "Setup Piper")

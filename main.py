@@ -2,14 +2,13 @@
 main.py — Orchestratore della pipeline completa.
 
 Esegue in sequenza: fetch -> sintesi -> TTS -> invio Telegram.
+Genera e invia UN AUDIO SEPARATO PER OGNI SEZIONE (Italia, Esteri, Economia,
+Tecnologia), inviati come messaggi distinti in sequenza sul canale Telegram.
+
 Pensato per essere lanciato da Task Scheduler ogni mattina.
 
 Uso:
     python main.py
-
-Ogni fase è isolata: se una fase fallisce, l'errore viene loggato con
-traceback completo in logs/main.log e lo script esce con codice diverso da 0
-(utile per far vedere a Task Scheduler che qualcosa è andato storto).
 """
 
 import logging
@@ -49,22 +48,28 @@ def esegui_pipeline():
         log.error("Nessun articolo raccolto. Interrompo la pipeline.")
         sys.exit(1)
 
-    # --- Fase 2: sintesi ---
+    # --- Fase 2: sintesi (una voce di testo per sezione) ---
     log.info("Fase 2/4: sintesi con Claude...")
-    testo = synthesize.sintetizza(articoli)
-    synthesize.salva_testo(testo)
-    if not testo.strip():
-        log.error("Sintesi vuota. Interrompo la pipeline.")
+    sezioni = synthesize.sintetizza(articoli)
+    synthesize.salva_sezioni(sezioni)
+    if not sezioni:
+        log.error("Nessuna sezione generata. Interrompo la pipeline.")
         sys.exit(1)
 
-    # --- Fase 3: TTS ---
-    log.info("Fase 3/4: sintesi vocale...")
-    percorso_audio = tts.genera_audio(testo)
+    # --- Fase 3 + 4: per ogni sezione, genera l'audio e invialo subito ---
+    # (invio sezione per sezione, non tutto insieme alla fine, così se una
+    # sezione fallisce le precedenti sono già state consegnate)
+    data_oggi_breve = datetime.now().strftime("%d/%m/%Y")
+    for s in sezioni:
+        nome = s["nome"]
+        log.info(f"Fase 3/4: sintesi vocale sezione '{nome}'...")
+        percorso_wav = config.percorso_audio_wav_sezione(nome)
+        percorso_ogg = config.percorso_audio_ogg_sezione(nome)
+        percorso_audio = tts.genera_audio(s["testo"], percorso_wav, percorso_ogg)
 
-    # --- Fase 4: invio Telegram ---
-    log.info("Fase 4/4: invio su Telegram...")
-    didascalia = f"Rassegna stampa audio — {datetime.now().strftime('%A %d %B %Y')}"
-    send_telegram.invia_audio(percorso_audio, didascalia=didascalia)
+        log.info(f"Fase 4/4: invio sezione '{nome}' su Telegram...")
+        didascalia = f"{nome} — {data_oggi_breve}"
+        send_telegram.invia_audio(percorso_audio, didascalia=didascalia)
 
     log.info("Pipeline completata con successo.")
 

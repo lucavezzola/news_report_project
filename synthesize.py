@@ -1,9 +1,9 @@
 """
 synthesize.py — Fase 2: sintesi imparziale degli articoli via Claude API.
 
-Prende la lista di articoli grezzi (da fetch.py) e produce un testo unico,
-in prosa parlata, diviso per sezioni, pensato per essere letto ad alta voce
-da un TTS.
+Prende la lista di articoli grezzi (da fetch.py) e produce il testo della
+rassegna DIVISO PER SEZIONE (Italia, Esteri, Economia, Tecnologia), così da
+poter generare un file audio separato per ciascuna sezione nella Fase 3.
 
 Richiede la variabile d'ambiente ANTHROPIC_API_KEY.
 
@@ -12,7 +12,8 @@ Uso da terminale (test manuale su un JSON già salvato):
 
 Uso da main.py:
     from synthesize import sintetizza
-    testo = sintetizza(articoli)
+    sezioni = sintetizza(articoli)
+    # sezioni è una lista di dict: [{"nome": "Italia", "testo": "..."}, ...]
 """
 
 import json
@@ -47,7 +48,17 @@ REGOLE DI IMPARZIALITÀ (fondamentali, da rispettare sempre):
 4. Se un fatto è riportato da una sola fonte, dillo esplicitamente (es. "secondo una sola fonte, ANSA, ...") perché ha minore affidabilità rispetto a una notizia confermata da più fonti indipendenti.
 5. Raggruppa gli articoli per argomento/evento: se più fonti raccontano lo stesso fatto, trattale come un unico blocco narrativo, non ripetere la stessa notizia più volte.
 
-FORMATO DI OUTPUT (fondamentale, perché il testo verrà letto da un sintetizzatore vocale):
+FORMATO DI OUTPUT — RISPOSTA STRUTTURATA IN JSON:
+Devi rispondere SOLO con un oggetto JSON valido, senza testo prima o dopo, senza blocchi di codice markdown (niente ```), fatto così:
+
+{"sezioni": [{"nome": "Italia", "testo": "..."}, {"nome": "Esteri", "testo": "..."}, ...]}
+
+Regole per il campo "sezioni":
+- Una voce per ogni sezione che ha notizie rilevanti oggi, nell'ordine: Italia, Esteri, Economia, Tecnologia.
+- Se una sezione non ha notizie rilevanti, ometti del tutto quella voce dall'array (non includerla con testo vuoto).
+- "nome" deve essere esattamente uno tra: "Italia", "Esteri", "Economia", "Tecnologia" (esattamente così, servirà al codice per salvare i file).
+
+Regole per il campo "testo" di ciascuna sezione (fondamentali, perché verrà letto da un sintetizzatore vocale, UNA SEZIONE = UN FILE AUDIO SEPARATO):
 - Scrivi in prosa parlata: frasi brevi e scorrevoli, come se un giornalista radiofonico stesse leggendo in diretta.
 - NIENTE markdown, NIENTE elenchi puntati, NIENTE asterischi o simboli. Solo testo continuo.
 - Organizza il contenuto nelle sezioni, in quest'ordine: Italia, Esteri, Economia, Tecnologia.
@@ -98,8 +109,24 @@ def _data_italiana_oggi():
     return f"{GIORNI_IT[oggi.weekday()]} {oggi.day} {MESI_IT[oggi.month - 1]} {oggi.year}"
 
 
+def _estrai_json(testo_grezzo):
+    """Il modello a volte avvolge il JSON in un blocco ```json ... ``` anche
+    quando gli viene chiesto di non farlo: qui lo togliamo se presente prima
+    di fare il parsing."""
+    t = testo_grezzo.strip()
+    if t.startswith("```"):
+        t = t.split("\n", 1)[1] if "\n" in t else t
+        if t.endswith("```"):
+            t = t.rsplit("```", 1)[0]
+        t = t.strip()
+        if t.lower().startswith("json"):
+            t = t[4:].strip()
+    return t
+
+
 def sintetizza(articoli, model=None):
-    """Chiama Claude API e restituisce il testo della rassegna pronto per il TTS."""
+    """Chiama Claude API e restituisce una lista di dict {"nome": ..., "testo": ...},
+    una voce per sezione con notizie rilevanti oggi."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError(
             "Variabile d'ambiente ANTHROPIC_API_KEY non impostata. "
@@ -112,7 +139,7 @@ def sintetizza(articoli, model=None):
     input_utente = _prepara_input_utente(articoli)
     if not input_utente.strip():
         log.warning("Nessun articolo da sintetizzare (input vuoto).")
-        return ""
+        return []
 
     log.info(f"Invio {len(articoli)} articoli a Claude ({model}) per la sintesi...")
 
@@ -129,33 +156,64 @@ def sintetizza(articoli, model=None):
                     f"Oggi è {data_oggi}. Usa questa data esatta nel saluto di apertura "
                     "(non calcolarla o dedurla in altro modo).\n\n"
                     "Ecco gli articoli raccolti oggi, raggruppati per sezione. "
-                    "Scrivi il resoconto seguendo tutte le regole del system prompt.\n"
+                    "Rispondi SOLO con il JSON richiesto nel system prompt.\n"
                     + input_utente
                 ),
             }
         ],
     )
 
-    testo = "".join(
+    testo_grezzo = "".join(
         block.text for block in response.content if block.type == "text"
     )
-    log.info(f"Sintesi completata: {len(testo)} caratteri.")
-    return testo
+
+    try:
+        dati = json.loads(_estrai_json(testo_grezzo))
+        sezioni = dati.get("sezioni", [])
+    except (json.JSONDecodeError, AttributeError) as e:
+        log.error(f"Risposta del modello non è JSON valido: {e}")
+        log.error(f"Risposta grezza ricevuta:\n{testo_grezzo}")
+        raise RuntimeError(
+            "Claude non ha restituito un JSON valido. Guarda logs/synthesize.log "
+            "per il testo grezzo ricevuto."
+        )
+
+    # Validazione minima: nomi sezione devono essere tra quelli attesi
+    sezioni_valide = []
+    for s in sezioni:
+        nome = s.get("nome", "")
+        testo = s.get("testo", "")
+        if nome not in config.SEZIONI:
+            log.warning(f"Sezione con nome inatteso ignorata: '{nome}'")
+            continue
+        if not testo.strip():
+            log.warning(f"Sezione '{nome}' ha testo vuoto, ignorata.")
+            continue
+        sezioni_valide.append({"nome": nome, "testo": testo.strip()})
+
+    log.info(f"Sintesi completata: {len(sezioni_valide)} sezioni generate "
+              f"({', '.join(s['nome'] for s in sezioni_valide)}).")
+    return sezioni_valide
 
 
-def salva_testo(testo, percorso=None):
-    percorso = percorso or config.FILE_TESTO_SINTESI
-    with open(percorso, "w", encoding="utf-8") as f:
-        f.write(testo)
-    log.info(f"Salvato testo di sintesi in {percorso}")
+def salva_sezioni(sezioni):
+    """Salva ogni sezione nel proprio file di testo (output/testo_<Sezione>.txt)."""
+    for s in sezioni:
+        percorso = config.percorso_testo_sezione(s["nome"])
+        with open(percorso, "w", encoding="utf-8") as f:
+            f.write(s["testo"])
+        log.info(f"Salvato testo sezione '{s['nome']}' in {percorso}")
 
 
 if __name__ == "__main__":
     with open(config.FILE_JSON_GREZZO, encoding="utf-8") as f:
         articoli = json.load(f)
 
-    testo = sintetizza(articoli)
-    salva_testo(testo)
+    sezioni = sintetizza(articoli)
+    salva_sezioni(sezioni)
 
-    print("\n--- Testo generato ---\n")
-    print(testo)
+    print("\n--- Sezioni generate ---\n")
+    for s in sezioni:
+        print(f"=== {s['nome']} ===")
+        print(s["testo"])
+        print()
