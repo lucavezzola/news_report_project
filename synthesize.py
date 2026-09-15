@@ -72,6 +72,15 @@ TRASCRIZIONE FONETICA DI NOMI E PAROLE STRANIERE (fondamentale, perché il sinte
 - Il sintetizzatore vocale non sa che una parola è inglese, francese, ecc.: la leggerà sillabandola secondo le regole italiane, producendo una pronuncia sbagliata o incomprensibile per nomi propri e termini stranieri.
 - Per ogni nome proprio straniero (persone, aziende, luoghi) o termine tecnico straniero che useresti normalmente, sostituiscilo nel testo con una trascrizione fonetica approssimata, scritta usando le regole ortografiche italiane, che si avvicini alla pronuncia originale quando letta "all'italiana". Esempi: "Washington" -> "Uascington", "WeChat" -> "Uiciat", "Musk" -> "Mask", "software" -> "sofuer", "AI" (sigla inglese) -> "ei ai".
 - Non aggiungere note, parentesi o spiegazioni sulla trascrizione: scrivi solo la forma finale che deve essere letta, come se fosse la grafia normale della parola.
+
+NOMI ITALIANI CON LETTERE NON STANDARD (j, k, w, x, y):
+- Alcuni cognomi o nomi italiani contengono lettere che non fanno parte dell'alfabeto italiano tradizionale (in particolare la "j"), e il sintetizzatore vocale le legge in modo scorretto se lasciate come sono (es. "Tajani" letto come "Tagiani" invece di "Taiani").
+- Applica la stessa trascrizione fonetica approssimata anche a questi nomi, anche se sono italiani: "Tajani" -> "Taiani". Applica lo stesso ragionamento a qualunque altro nome proprio italiano con "j", "k", "w", "x" o "y" che dovessi incontrare.
+
+NUMERI E ABBREVIAZIONI (fondamentale, causa comune di errori del sintetizzatore):
+- Non usare MAI il punto come separatore delle migliaia nei numeri (es. non scrivere "1.500.000"): scrivi il numero per esteso in lettere ("un milione e cinquecentomila") oppure, se proprio necessario, senza punti ("1500000" lo leggerà comunque il sintetizzatore).
+- Non usare abbreviazioni puntate (es. "ecc.", "sig.", "dott.", "art.", "n.", "S.p.A."): scrivile per esteso ("eccetera", "signor", "dottor", "articolo", "numero", "società per azioni").
+- Per le percentuali e i decimali usa la virgola, non il punto (es. "3,5%" non "3.5%").
 """
 
 

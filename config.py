@@ -9,6 +9,7 @@ Modifica questo file per:
 
 from datetime import timedelta
 from pathlib import Path
+import random
 
 # ---------------------------------------------------------------------------
 # FONTI RSS
@@ -125,16 +126,24 @@ def _carica_voci_preferite(percorso="voci_preferite.txt"):
 
 
 XTTS_VOCI_PREFERITE = _carica_voci_preferite()
+_XTTS_VOCI_ASSEGNATE = None
 
 
 def voce_per_sezione(nome_sezione):
     """Ritorna il nome della voce predefinita da usare per questa sezione, o
     None se non è stata configurata nessuna lista di voci preferite (in quel
     caso tts.py userà il voice cloning di default da XTTS_SPEAKER_WAV)."""
+    global _XTTS_VOCI_ASSEGNATE
+
     if not XTTS_VOCI_PREFERITE:
         return None
-    indice = SEZIONI.index(nome_sezione) % len(XTTS_VOCI_PREFERITE)
-    return XTTS_VOCI_PREFERITE[indice]
+    if _XTTS_VOCI_ASSEGNATE is None:
+        voci_scelte = []
+        while len(voci_scelte) < len(SEZIONI):
+            voci_scelte.extend(random.sample(XTTS_VOCI_PREFERITE, k=len(XTTS_VOCI_PREFERITE)))
+        voci_scelte = voci_scelte[:len(SEZIONI)]
+        _XTTS_VOCI_ASSEGNATE = dict(zip(SEZIONI, voci_scelte))
+    return _XTTS_VOCI_ASSEGNATE[nome_sezione]
 
 # ---------------------------------------------------------------------------
 # PARAMETRI GENERALI

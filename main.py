@@ -60,20 +60,28 @@ def esegui_pipeline():
     # (invio sezione per sezione, non tutto insieme alla fine, così se una
     # sezione fallisce le precedenti sono già state consegnate)
     data_oggi_breve = datetime.now().strftime("%d/%m/%Y")
+    sezioni_fallite = []
     for s in sezioni:
         nome = s["nome"]
-        log.info(f"Fase 3/4: sintesi vocale sezione '{nome}'...")
-        percorso_wav = config.percorso_audio_wav_sezione(nome)
-        percorso_ogg = config.percorso_audio_ogg_sezione(nome)
-        voce = config.voce_per_sezione(nome)
-        if voce:
-            log.info(f"  voce assegnata a '{nome}': {voce}")
-        percorso_audio = tts.genera_audio(s["testo"], percorso_wav, percorso_ogg, speaker_name=voce)
+        try:
+            log.info(f"Fase 3/4: sintesi vocale sezione '{nome}'...")
+            percorso_wav = config.percorso_audio_wav_sezione(nome)
+            percorso_ogg = config.percorso_audio_ogg_sezione(nome)
+            voce = config.voce_per_sezione(nome)
+            if voce:
+                log.info(f"  voce assegnata a '{nome}': {voce}")
+            percorso_audio = tts.genera_audio(s["testo"], percorso_wav, percorso_ogg, speaker_name=voce)
 
-        log.info(f"Fase 4/4: invio sezione '{nome}' su Telegram...")
-        didascalia = f"{nome} — {data_oggi_breve}"
-        send_telegram.invia_audio(percorso_audio, didascalia=didascalia)
+            log.info(f"Fase 4/4: invio sezione '{nome}' su Telegram...")
+            didascalia = f"{nome} — {data_oggi_breve}"
+            send_telegram.invia_audio(percorso_audio, didascalia=didascalia)
+        except Exception:
+            log.error(f"Sezione '{nome}' fallita, salto e continuo con le altre:\n" + traceback.format_exc())
+            sezioni_fallite.append(nome)
 
+    if sezioni_fallite:
+        log.error(f"Pipeline completata con errori nelle sezioni: {', '.join(sezioni_fallite)}")
+        sys.exit(1)  # exit code diverso da 0 per far notare il problema a Task Scheduler
     log.info("Pipeline completata con successo.")
 
 
