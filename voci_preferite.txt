@@ -1,0 +1,31 @@
+# Incolla qui la tua lista di voci preferite, una per riga, nell'ordine che
+# preferisci (usa "python tts.py --list-speakers" per vedere i nomi validi).
+# Le righe che iniziano con # sono commenti e vengono ignorate.
+#
+# main.py assegnerà automaticamente una voce diversa a ciascuna sezione
+# (Italia, Esteri, Economia, Tecnologia) seguendo quest'ordine:
+# - se hai almeno 4 nomi, le prime 4 vanno una per sezione
+# - se ne hai meno di 4, si ricomincia dall'inizio della lista (rotazione)
+# - se ne hai di più, quelle oltre la quarta vengono semplicemente ignorate
+#   (a meno che tu non aggiunga altre sezioni in config.py)
+#
+# Esempio (sostituisci con la tua lista vera):
+Abrahan Mack
+Adde Michal
+Alexandra Hisakawa
+Ana Florence
+Chandra MacFarland
+Claribel Dervla
+Damjan Chapman
+Dionisio Schuyler
+Filip Traverse
+Ige Behringer
+Ilkin Urbano
+Kumar Dahl
+Maja Ruoho
+Narelle Moon
+Nova Hogarth
+Rosemary Okafor
+Sofia Hellen
+Tanja Adelina
+Wulf Carlevaro

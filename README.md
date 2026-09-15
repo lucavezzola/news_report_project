@@ -47,13 +47,36 @@ Poi apri `.env` e inserisci:
    `https://api.telegram.org/bot<IL_TUO_TOKEN>/getUpdates`
    Cerca `"chat":{"id": ...}` nel JSON restituito: quel numero (di solito negativo per i canali, tipo `-1001234567890`) è il tuo `TELEGRAM_CHAT_ID`.
 
-### 4. Setup Piper (TTS locale)
+### 4. Setup XTTS-v2 (TTS neurale con voice cloning)
 
-1. Scarica il binario Piper per Windows dalla [pagina release ufficiale](https://github.com/rhasspy/piper/releases) e metti la cartella `piper/` nella root del progetto.
-2. Scarica una voce italiana pre-addestrata (es. `it_IT-riccardo-x_low` o `it_IT-paola-medium`) dal repository [rhasspy/piper-voices su Hugging Face](https://huggingface.co/rhasspy/piper-voices/tree/main/it/it_IT) — servono entrambi i file `.onnx` e `.onnx.json`.
-3. Metti i file scaricati in una cartella `piper_models/` dentro `piper/`.
-4. Assicurati che l'eseguibile `piper.exe` sia raggiungibile: imposta il percorso assoluto in `config.py` → `PIPER_EXECUTABLE`.
-5. Installa **ffmpeg** (serve per convertire il wav in ogg) — [ffmpeg.org](https://ffmpeg.org/download.html), aggiungilo al PATH.
+Il progetto usa **XTTS-v2** (Coqui) per la sintesi vocale: qualità e naturalezza molto superiori a un TTS "a regole" come Piper, con la possibilità di clonare una voce a scelta da un breve campione audio. Gira in locale sulla tua GPU.
+
+1. **Installa PyTorch con supporto CUDA** — PRIMA di installare il resto. Il tuo driver (visto con `nvidia-smi`) supporta fino a CUDA 13.4, quindi il comando giusto per te è:
+   ```bash
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+   ```
+   (se dovesse dare problemi di compatibilità, `cu128` è l'alternativa più "conservativa" — vedi [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/) per tutte le opzioni)
+2. **Installa le altre dipendenze**, incluso `coqui-tts` (vedi `requirements.txt`):
+   ```bash
+   pip install -r requirements.txt
+   ```
+   ⚠️ Non installare mai il pacchetto `TTS` di PyPI: è il progetto originale di Coqui, abbandonato dopo la chiusura dell'azienda. Usiamo `coqui-tts`, il fork attivamente mantenuto — importa comunque con `from TTS.api import TTS`, quindi nel codice non cambia nulla.
+3. **Prepara un file audio di riferimento** per il voice cloning: 6-30 secondi di voce pulita, senza rumore di fondo, in formato `.wav`. Può essere la tua voce, quella di un amico (con il suo consenso), o un campione di dominio pubblico. Mettilo in `xtts_reference/voce_riferimento.wav` (o aggiorna il percorso in `config.py` → `XTTS_SPEAKER_WAV`).
+4. **Installa ffmpeg** (serve per convertire il wav generato in ogg, più leggero per Telegram) — [ffmpeg.org](https://ffmpeg.org/download.html), aggiungilo al PATH.
+5. Al primo avvio di `tts.py`, il modello (~1.9GB) viene scaricato automaticamente da Hugging Face e messo in cache — la primissima esecuzione sarà quindi più lenta delle successive.
+
+**Nota sulla VRAM:** `tts.py` è scritto per essere prudente con la memoria della GPU:
+- il modello viene caricato **una sola volta** e riusato per tutte le sezioni, non ricaricato ogni volta;
+- gira in **fp16** (mezza precisione) di default, che dimezza l'uso di VRAM — se hai problemi di qualità audio, prova a mettere `XTTS_USE_FP16 = False` in `config.py` (userà più memoria, circa 8-10GB);
+- il testo di ogni sezione viene spezzato in blocchi da `XTTS_MAX_CHARS_PER_CHUNK` caratteri (250 di default) prima di essere sintetizzato — sia per stabilità del modello su testi lunghi, sia per contenere i picchi di memoria;
+- se la VRAM libera scende sotto la soglia `XTTS_MIN_VRAM_LIBERA_GB` (4GB di default), lo script passa automaticamente alla CPU invece di rischiare un crash per out-of-memory (sarà molto più lento, ma completa comunque).
+
+**⚠️ La tua GPU ha 6GB di VRAM totali — margine stretto per XTTS-v2.** Consigli specifici per te:
+- **Chiudi il browser (Brave) prima di lanciare la pipeline.** Dal tuo `nvidia-smi` risulta che Brave sta già occupando un po' di VRAM in background (comune coi browser moderni per l'accelerazione grafica) — su una scheda da 6GB ogni MB conta.
+- Ho abbassato il default di `XTTS_MAX_CHARS_PER_CHUNK` a 180 (invece di 250) proprio per questo: blocchi più piccoli = picchi di memoria più bassi.
+- Se nonostante tutto vedi errori di out-of-memory, i prossimi passi sono, in ordine: chiudere altre app che usano la GPU → abbassare `XTTS_MAX_CHARS_PER_CHUNK` ulteriormente (es. 120) → in ultima istanza `XTTS_USE_FP16` è già True, quindi non c'è altro da stringere lì.
+
+Se hai poca VRAM disponibile (es. altre applicazioni che usano la GPU in background), riduci `XTTS_MAX_CHARS_PER_CHUNK` a 150 circa: blocchi più piccoli usano meno memoria per volta.
 
 ## Test fase per fase (consigliato, come da roadmap)
 
@@ -98,4 +121,4 @@ Le istruzioni di imparzialità sono nel `SYSTEM_PROMPT` dentro `synthesize.py`. 
 
 ## Costi stimati
 
-Solo l'API Claude ha un costo (Sonnet, uso quotidiano di sintesi su un volume moderato di articoli): resta nell'ordine di qualche euro al mese, come stimato nel documento di progetto originale. Tutto il resto (RSS, Piper, Telegram, scheduling) è gratuito.
+Solo l'API Claude ha un costo (Sonnet, uso quotidiano di sintesi su un volume moderato di articoli): resta nell'ordine di qualche euro al mese, come stimato nel documento di progetto originale. XTTS-v2 gira in locale sulla tua GPU (nessun costo per chiamata), così come RSS e Telegram — l'unico "costo" è il tempo di calcolo sulla tua macchina.

@@ -3,3 +3,5 @@ output/
 logs/
 piper/
 __pycache__/
+xtts_reference/
+venv/

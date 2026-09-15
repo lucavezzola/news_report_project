@@ -2,3 +2,16 @@ feedparser>=6.0.14
 anthropic>=0.40.0
 requests>=2.32.0
 python-dotenv>=1.0.0
+numpy>=1.26.0
+soundfile>=0.12.1
+
+# XTTS-v2: installa PRIMA torch con supporto CUDA per la tua GPU seguendo
+# https://pytorch.org/get-started/locally/ (il comando esatto dipende dalla
+# versione CUDA installata sul tuo sistema), POI installa coqui-tts.
+# NON usare il pacchetto "TTS" di PyPI: è il progetto originale, non più
+# mantenuto da Coqui. Usa invece questo fork attivamente mantenuto:
+coqui-tts[codec]>=0.24.0
+
+# Bug noto (idiap/coqui-ai-TTS#558): coqui-tts importa una funzione rimossa
+# in transformers 5.x, quindi va tenuta la 4.x finché il fix non è rilasciato.
+transformers>=4.57,<5
