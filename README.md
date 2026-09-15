@@ -1,21 +1,22 @@
 # Rassegna Stampa Audio Giornaliera
 
 Implementazione della pipeline descritta in `progetto-rassegna-audio.md`:
-RSS → sintesi imparziale (Claude) → audio (Piper) → invio Telegram.
+RSS → sintesi imparziale (Claude) → audio (XTTS-v2) → invio Telegram.
 
 ## Struttura del progetto
 
 ```
-config.py          configurazione: fonti RSS, sezioni, parametri
-fetch.py           Fase 1 — raccolta articoli RSS
-synthesize.py       Fase 2 — sintesi imparziale via Claude API
-tts.py             Fase 3 — sintesi vocale locale con Piper
-send_telegram.py    Fase 4 — invio audio su Telegram
-main.py            orchestratore: esegue tutte le fasi in sequenza
-requirements.txt    dipendenze Python
-.env.example        template variabili d'ambiente (copialo in .env)
-output/             file generati (JSON grezzo, testo, audio) — non versionare
-logs/               log di ogni fase, un file per modulo
+config.py              configurazione: fonti RSS, sezioni, parametri
+fetch.py                Fase 1 — raccolta articoli RSS
+synthesize.py            Fase 2 — sintesi imparziale via Claude API
+tts.py                  Fase 3 — sintesi vocale locale con XTTS-v2 (Coqui)
+send_telegram.py         Fase 4 — invio audio su Telegram
+main.py                 orchestratore: esegue tutte le fasi in sequenza
+run_tts_e_invio.py       rilancia solo Fase 3 + Fase 4 sui testi già generati
+requirements.txt         dipendenze Python
+.env.example             template variabili d'ambiente (copialo in .env)
+output/                 file generati (JSON grezzo, testo, audio) — non versionare
+logs/                   log di ogni fase, un file per modulo
 ```
 
 ## Setup
@@ -67,16 +68,14 @@ Il progetto usa **XTTS-v2** (Coqui) per la sintesi vocale: qualità e naturalezz
 
 **Nota sulla VRAM:** `tts.py` è scritto per essere prudente con la memoria della GPU:
 - il modello viene caricato **una sola volta** e riusato per tutte le sezioni, non ricaricato ogni volta;
-- gira in **fp16** (mezza precisione) di default, che dimezza l'uso di VRAM — se hai problemi di qualità audio, prova a mettere `XTTS_USE_FP16 = False` in `config.py` (userà più memoria, circa 8-10GB);
-- il testo di ogni sezione viene spezzato in blocchi da `XTTS_MAX_CHARS_PER_CHUNK` caratteri (250 di default) prima di essere sintetizzato — sia per stabilità del modello su testi lunghi, sia per contenere i picchi di memoria;
+- gira in **fp32** di default (`XTTS_USE_FP16 = False` in `config.py`): il sotto-modulo che analizza l'audio di riferimento per il voice cloning non gestisce in modo affidabile la mezza precisione in questa versione di `coqui-tts` (va in errore per mismatch fp16/fp32 tra pesi e input), quindi teniamo fp32 per evitare questa classe di errori — userà più VRAM (circa 8-10GB), ma è più stabile. Puoi provare a mettere `XTTS_USE_FP16 = True` per risparmiare memoria, ma preparati a debuggare eventuali errori simili;
+- il testo di ogni sezione viene spezzato **una frase per blocco** (XTTS-v2 è più stabile così su testi lunghi), sotto la soglia `XTTS_MAX_CHARS_PER_CHUNK` caratteri (200 di default). Se una singola frase supera comunque la soglia, viene spezzata ulteriormente su virgole/punto e virgola e, come ultima risorsa, sulle singole parole — questo garantisce che nessun blocco superi mai il limite tecnico fisso di XTTS-v2 (213 caratteri per l'italiano), altrimenti l'audio verrebbe troncato;
 - se la VRAM libera scende sotto la soglia `XTTS_MIN_VRAM_LIBERA_GB` (4GB di default), lo script passa automaticamente alla CPU invece di rischiare un crash per out-of-memory (sarà molto più lento, ma completa comunque).
 
 **⚠️ La tua GPU ha 6GB di VRAM totali — margine stretto per XTTS-v2.** Consigli specifici per te:
 - **Chiudi il browser (Brave) prima di lanciare la pipeline.** Dal tuo `nvidia-smi` risulta che Brave sta già occupando un po' di VRAM in background (comune coi browser moderni per l'accelerazione grafica) — su una scheda da 6GB ogni MB conta.
-- Ho abbassato il default di `XTTS_MAX_CHARS_PER_CHUNK` a 180 (invece di 250) proprio per questo: blocchi più piccoli = picchi di memoria più bassi.
-- Se nonostante tutto vedi errori di out-of-memory, i prossimi passi sono, in ordine: chiudere altre app che usano la GPU → abbassare `XTTS_MAX_CHARS_PER_CHUNK` ulteriormente (es. 120) → in ultima istanza `XTTS_USE_FP16` è già True, quindi non c'è altro da stringere lì.
-
-Se hai poca VRAM disponibile (es. altre applicazioni che usano la GPU in background), riduci `XTTS_MAX_CHARS_PER_CHUNK` a 150 circa: blocchi più piccoli usano meno memoria per volta.
+- `XTTS_MAX_CHARS_PER_CHUNK` è impostato a 200 proprio per questo: blocchi più piccoli = picchi di memoria più bassi. Non alzarlo sopra ~210 (limite fisso del modello per l'italiano).
+- Se nonostante tutto vedi errori di out-of-memory, i prossimi passi sono, in ordine: chiudere altre app che usano la GPU → abbassare `XTTS_MAX_CHARS_PER_CHUNK` ulteriormente (es. 120) → provare `XTTS_USE_FP16 = True` in `config.py` (rischio di errori di compatibilità, vedi nota sopra).
 
 ## Test fase per fase (consigliato, come da roadmap)
 
@@ -105,6 +104,21 @@ python main.py
 
 **Nota su Reuters:** Reuters ha dismesso i feed RSS pubblici ufficiali da anni. Ho impostato un workaround via Google News (filtrato su reuters.com), marcato chiaramente nei commenti di `config.py`. È meno affidabile di un feed diretto: se noti risultati scarsi, valuta di toglierlo e affidarti solo a BBC/ANSA/AGI per l'estero, o di usare un servizio "RSS generator" di terze parti.
 
+## Rilanciare solo TTS + invio (senza rifare fetch e sintesi)
+
+Se devi correggere a mano un testo già generato (es. un nome pronunciato male) o hai aggiornato `tts.py`/`config.py` e vuoi rigenerare l'audio senza richiamare Claude, usa `run_tts_e_invio.py`: legge i file `output/testo_<Sezione>.txt` già esistenti (creati dall'ultima `python main.py` o `python synthesize.py`) e rifà solo Fase 3 (TTS) + Fase 4 (invio Telegram).
+
+```bash
+# tutte le sezioni del giorno
+python run_tts_e_invio.py
+
+# solo alcune sezioni (es. dopo aver corretto a mano Italia)
+python run_tts_e_invio.py -s Italia
+python run_tts_e_invio.py -s Italia Economia
+```
+
+Se un file `testo_<Sezione>.txt` manca o è vuoto (es. sezione omessa quel giorno perché senza notizie), lo script la salta con un warning nel log, senza bloccare le altre.
+
 ## Scheduling (Task Scheduler di Windows)
 
 1. Apri **Utilità di pianificazione** → Crea attività.
@@ -118,6 +132,17 @@ python main.py
 ## Personalizzazione del prompt di sintesi
 
 Le istruzioni di imparzialità sono nel `SYSTEM_PROMPT` dentro `synthesize.py`. È il punto su cui vale la pena iterare di più: ascolta i primi risultati e affina la formulazione se noti bias, ripetizioni o un tono poco naturale da leggere ad alta voce.
+
+Oltre all'imparzialità, il prompt include regole pensate specificamente per il sintetizzatore vocale, aggiunte dopo aver ascoltato i primi audio generati:
+- **Trascrizione fonetica** di nomi e parole straniere (es. "Musk" → "Mask", "software" → "sofuer"), *e* di nomi italiani con lettere non standard come la "j" (es. "Tajani" → "Taiani"), che XTTS-v2 altrimenti pronuncia in modo scorretto leggendoli con le regole di pronuncia italiane.
+- **Niente punto come separatore delle migliaia** nei numeri (es. non "1.500.000", meglio per esteso in lettere) e **niente abbreviazioni puntate** (es. non "ecc.", "dott.", "art."): XTTS-v2 a volte legge il punto alla lettera come la parola "punto" invece di riconoscerlo come fine frase o abbreviazione — un artefatto più frequente nei numeri (tipicamente nella sezione Economia).
+- **Frasi sotto circa 180 caratteri**: XTTS-v2 ha un limite tecnico fisso di 213 caratteri per l'italiano. Frasi via via più corte di quel limite lasciano margine al chunking in `tts.py` e riducono i casi in cui è necessario spezzare a metà frase senza una punteggiatura naturale su cui appoggiarsi.
+
+## Problemi noti / Troubleshooting
+
+- **Un blocco viene letto dicendo "punto" seguito da un breve rumore/artefatto**: capita quando il punto di fine frase resta come ultimo carattere della stringa passata a XTTS-v2 — l'euristica interna del modello che distingue "fine frase" da "numero decimale" fa un look-ahead sul carattere successivo, e se non c'è nulla dopo può leggerlo alla lettera. `tts.py` toglie la punteggiatura di fine frase (`.!?`) prima di passare il testo al modello, ricreando la pausa con un breve silenzio inserito a parte tra un blocco e l'altro (non con la punteggiatura letta dal modello). Se il problema si ripresenta, verifica che questa pulizia sia ancora presente nel codice.
+- **Warning `"The text length exceeds the character limit of 213 for language 'it', this might cause truncated audio"`**: significa che un blocco ha superato il limite tecnico del modello nonostante il chunking. Non dovrebbe più comparire dato che ogni frase troppo lunga viene ulteriormente spezzata su virgole/punto e virgola e, come ultima risorsa, sulle singole parole — garantendo che nessun blocco superi mai la soglia. Se lo vedi ancora, controlla che questo fallback sia presente in `_spezza_frase_lunga`/`_spezza_su_parole` in `tts.py`.
+- **Un nome proprio viene pronunciato male** (es. straniero, o italiano con lettere come "j", "k", "w", "x", "y"): il fix va nel `SYSTEM_PROMPT` di `synthesize.py`, non in `tts.py` — è lì che si istruisce Claude a scrivere una trascrizione fonetica approssimata invece del nome originale.
 
 ## Costi stimati
 
