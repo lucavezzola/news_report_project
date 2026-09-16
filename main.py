@@ -4,6 +4,8 @@ main.py — Orchestratore della pipeline completa.
 Esegue in sequenza: fetch -> sintesi -> TTS -> invio Telegram.
 Genera e invia UN AUDIO SEPARATO PER OGNI SEZIONE (Italia, Esteri, Economia,
 Tecnologia), inviati come messaggi distinti in sequenza sul canale Telegram.
+La prima sezione generata quel giorno riceve la musica di intro, l'ultima
+quella di outro (vedi musica.py e config.MUSICA_*).
 
 Pensato per essere lanciato da Task Scheduler ogni mattina.
 
@@ -59,10 +61,15 @@ def esegui_pipeline():
     # --- Fase 3 + 4: per ogni sezione, genera l'audio e invialo subito ---
     # (invio sezione per sezione, non tutto insieme alla fine, così se una
     # sezione fallisce le precedenti sono già state consegnate)
+    # e_prima/e_ultima si basano sulla posizione REALE nella lista di sezioni
+    # generate oggi (non su config.SEZIONI), perché una sezione può mancare
+    # se non ci sono notizie rilevanti quel giorno.
     data_oggi_breve = datetime.now().strftime("%d/%m/%Y")
     sezioni_fallite = []
-    for s in sezioni:
+    for indice, s in enumerate(sezioni):
         nome = s["nome"]
+        e_prima = (indice == 0)
+        e_ultima = (indice == len(sezioni) - 1)
         try:
             log.info(f"Fase 3/4: sintesi vocale sezione '{nome}'...")
             percorso_wav = config.percorso_audio_wav_sezione(nome)
@@ -70,7 +77,12 @@ def esegui_pipeline():
             voce = config.voce_per_sezione(nome)
             if voce:
                 log.info(f"  voce assegnata a '{nome}': {voce}")
-            percorso_audio = tts.genera_audio(s["testo"], percorso_wav, percorso_ogg, speaker_name=voce)
+            percorso_audio = tts.genera_audio(
+                s["testo"], percorso_wav, percorso_ogg,
+                speaker_name=voce,
+                e_prima_sezione=e_prima,
+                e_ultima_sezione=e_ultima,
+            )
 
             log.info(f"Fase 4/4: invio sezione '{nome}' su Telegram...")
             didascalia = f"{nome} — {data_oggi_breve}"

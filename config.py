@@ -9,7 +9,6 @@ Modifica questo file per:
 
 from datetime import timedelta
 from pathlib import Path
-import random
 
 # ---------------------------------------------------------------------------
 # FONTI RSS
@@ -126,24 +125,16 @@ def _carica_voci_preferite(percorso="voci_preferite.txt"):
 
 
 XTTS_VOCI_PREFERITE = _carica_voci_preferite()
-_XTTS_VOCI_ASSEGNATE = None
 
 
 def voce_per_sezione(nome_sezione):
     """Ritorna il nome della voce predefinita da usare per questa sezione, o
     None se non è stata configurata nessuna lista di voci preferite (in quel
     caso tts.py userà il voice cloning di default da XTTS_SPEAKER_WAV)."""
-    global _XTTS_VOCI_ASSEGNATE
-
     if not XTTS_VOCI_PREFERITE:
         return None
-    if _XTTS_VOCI_ASSEGNATE is None:
-        voci_scelte = []
-        while len(voci_scelte) < len(SEZIONI):
-            voci_scelte.extend(random.sample(XTTS_VOCI_PREFERITE, k=len(XTTS_VOCI_PREFERITE)))
-        voci_scelte = voci_scelte[:len(SEZIONI)]
-        _XTTS_VOCI_ASSEGNATE = dict(zip(SEZIONI, voci_scelte))
-    return _XTTS_VOCI_ASSEGNATE[nome_sezione]
+    indice = SEZIONI.index(nome_sezione) % len(XTTS_VOCI_PREFERITE)
+    return XTTS_VOCI_PREFERITE[indice]
 
 # ---------------------------------------------------------------------------
 # PARAMETRI GENERALI
@@ -218,5 +209,29 @@ FFMPEG_DLL_DIR = r"C:\ffmpeg8-shared\bin"  # aggiorna se hai usato un percorso d
 # Su una scheda da 6GB totali, 4GB liberi è già un buon segno che non ci sono
 # altri programmi pesanti in esecuzione sulla GPU.
 XTTS_MIN_VRAM_LIBERA_GB = 4.0
+
+# ---------------------------------------------------------------------------
+# MUSICA DI SOTTOFONDO (stile telegiornale)
+# ---------------------------------------------------------------------------
+# Tre file separati (qualunque formato legga ffmpeg: mp3, wav, ecc.):
+# - MUSICA_INTRO: suonata da sola prima della prima sezione della rassegna
+# - MUSICA_CORPO: in loop come sottofondo sotto la voce, in ogni sezione
+# - MUSICA_OUTRO: suonata da sola dopo l'ultima sezione della rassegna
+# Metti MUSICA_ABILITATA = False per disattivare del tutto (nessuna musica,
+# solo voce, come prima di questa funzionalità).
+MUSICA_ABILITATA = True
+MUSICA_INTRO = "musica/intro.wav"
+MUSICA_CORPO = "musica/corpo.wav"
+MUSICA_OUTRO = "musica/outro.wav"
+
+# Volume del sottofondo mentre la voce parla (0 = silenzio, 1 = stesso
+# volume della voce). Tenerlo basso: deve "sentirsi" senza sovrastare il parlato.
+MUSICA_VOLUME_SOTTOFONDO = 0.2
+# Volume di intro/outro quando suonano da sole (senza voce sopra), può stare
+# più alto del sottofondo.
+MUSICA_VOLUME_INTRO_OUTRO = 0.7
+# Dissolvenza (fade in/out, in millisecondi) applicata a inizio/fine di ogni
+# pezzo musicale, per evitare "click" uditi ai punti di attacco/stacco.
+MUSICA_DISSOLVENZA_MS = 500
 
 # Telegram — valori letti da variabili d'ambiente, vedi .env.example
