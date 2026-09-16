@@ -218,9 +218,9 @@ XTTS_MIN_VRAM_LIBERA_GB = 4.0
 # Metti MUSICA_ABILITATA = False per disattivare del tutto (nessuna musica,
 # solo voce, come prima di questa funzionalità).
 MUSICA_ABILITATA = True
-MUSICA_INTRO = "musica/intro.mp3"
-MUSICA_CORPO = "musica/corpo.mp3"
-MUSICA_OUTRO = "musica/outro.mp3"
+MUSICA_INTRO = "musica/intro.wav"
+MUSICA_CORPO = "musica/corpo.wav"
+MUSICA_OUTRO = "musica/outro.wav"
 
 # Volume del sottofondo mentre la voce parla (0 = silenzio, 1 = stesso
 # volume della voce). Tenerlo basso: deve "sentirsi" senza sovrastare il parlato.

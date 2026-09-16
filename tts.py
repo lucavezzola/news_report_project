@@ -3,10 +3,10 @@ tts.py — Fase 3: sintesi vocale locale con XTTS-v2 (Coqui), attento alla VRAM.
 
 Il modello viene caricato UNA SOLA VOLTA (non ad ogni chiamata) e riutilizzato
 per tutte le sezioni, per non spendere tempo/VRAM extra ricaricandolo ogni
-volta. Il testo di ogni sezione viene spezzato in blocchi di frasi (XTTS-v2
-degrada in stabilità su input molto lunghi in un colpo solo), sintetizzato
-blocco per blocco, e i blocchi vengono poi concatenati con un breve silenzio
-tra l'uno e l'altro.
+volta. Il testo di ogni sezione viene spezzato in blocchi (XTTS-v2 degrada in
+stabilità su input molto lunghi in un colpo solo), sintetizzato blocco per
+blocco, e i blocchi vengono poi concatenati con un breve silenzio tra l'uno e
+l'altro.
 
 Prerequisiti (vedi README.md sezione "Setup XTTS-v2"):
 - pacchetto `coqui-tts` installato (il fork mantenuto, NON il vecchio `TTS`
@@ -157,8 +157,11 @@ def _carica_modello():
 
 def _spezza_frase_lunga(frase, max_caratteri):
     """Se una singola frase supera da sola il limite, la spezza ulteriormente
-    sulle virgole (o punto e virgola), per restare sotto il limite interno di
-    XTTS-v2 (213 caratteri per l'italiano) ed evitare troncamenti audio."""
+    sulle virgole (o punto e virgola); se anche dopo questo qualche pezzo
+    resta troppo lungo (frase con clausole molto lunghe e poca punteggiatura
+    interna), lo spezza infine sulle singole parole come ultima risorsa,
+    per garantire che nessun blocco superi MAI il limite fisso di 213
+    caratteri di XTTS-v2 per l'italiano (altrimenti l'audio viene troncato)."""
     if len(frase) <= max_caratteri:
         return [frase]
 
@@ -166,6 +169,19 @@ def _spezza_frase_lunga(frase, max_caratteri):
     blocchi = []
     corrente = ""
     for pezzo in pezzi:
+        pezzo = pezzo.strip()
+        if not pezzo:
+            continue
+        if len(pezzo) > max_caratteri:
+            # Anche il singolo pezzo tra una virgola e l'altra è troppo
+            # lungo da solo: nessun'altra punteggiatura utile, spezzalo
+            # sulle parole.
+            if corrente:
+                blocchi.append(corrente)
+                corrente = ""
+            blocchi.extend(_spezza_su_parole(pezzo, max_caratteri))
+            continue
+
         candidato = f"{corrente} {pezzo}".strip() if corrente else pezzo
         if len(candidato) <= max_caratteri:
             corrente = candidato
@@ -176,41 +192,62 @@ def _spezza_frase_lunga(frase, max_caratteri):
     if corrente:
         blocchi.append(corrente)
 
-    # Se anche dopo aver spezzato sulle virgole un pezzo resta troppo lungo
-    # (frase senza punteggiatura interna), non c'è altro modo pulito di
-    # spezzarla: la teniamo com'è, il warning di XTTS è l'unico costo.
+    return blocchi
+
+
+def _spezza_su_parole(testo, max_caratteri):
+    """Ultima risorsa quando non c'è punteggiatura interna utilizzabile:
+    spezza sulle singole parole, garantendo che nessun blocco superi mai il
+    limite di caratteri (a costo di una pausa un po' meno naturale a metà
+    frase — comunque preferibile al troncamento dell'audio)."""
+    parole = testo.split()
+    blocchi = []
+    corrente = ""
+    for parola in parole:
+        candidato = f"{corrente} {parola}".strip() if corrente else parola
+        if len(candidato) <= max_caratteri:
+            corrente = candidato
+        else:
+            if corrente:
+                blocchi.append(corrente)
+            corrente = parola
+    if corrente:
+        blocchi.append(corrente)
     return blocchi
 
 
 def _spezza_in_blocchi(testo, max_caratteri=None):
-    """Spezza il testo in blocchi di frasi complete, ciascuno sotto la soglia
-    di caratteri, senza mai tagliare una frase a metà (tranne, come ultima
-    risorsa, sulle virgole per le frasi singole troppo lunghe)."""
+    """Spezza il testo in blocchi, UNA FRASE PER BLOCCO (XTTS-v2 è più
+    stabile così), spezzando ulteriormente solo le frasi singole che da sole
+    superano la soglia di caratteri."""
     max_caratteri = max_caratteri or config.XTTS_MAX_CHARS_PER_CHUNK
 
     frasi = re.split(r'(?<=[.!?])\s+', testo.strip())
     frasi = [f.strip() for f in frasi if f.strip()]
 
     blocchi = []
-    corrente = ""
     for frase in frasi:
-        candidato = f"{corrente} {frase}".strip() if corrente else frase
-        if len(candidato) <= max_caratteri:
-            corrente = candidato
+        if len(frase) <= max_caratteri:
+            blocchi.append(frase)
         else:
-            if corrente:
-                blocchi.append(corrente)
-            # Se anche una singola frase supera la soglia, proviamo a
-            # spezzarla ulteriormente sulle virgole prima di arrenderci.
-            if len(frase) > max_caratteri:
-                blocchi.extend(_spezza_frase_lunga(frase, max_caratteri))
-                corrente = ""
-            else:
-                corrente = frase
-    if corrente:
-        blocchi.append(corrente)
-
+            blocchi.extend(_spezza_frase_lunga(frase, max_caratteri))
     return blocchi
+
+
+def _pulisci_numeri(testo):
+    """Rimuove i punti usati come separatore delle migliaia (es. '1.500.000'
+    -> '1500000') e converte i punti decimali residui in virgola (es. '3.5'
+    -> '3,5'), perché XTTS-v2 non li interpreta correttamente e li legge
+    alla lettera come la parola 'punto' (causa dell'artefatto 'puntopunto').
+
+    Non tocca date come '13.09.2026' (i gruppi non hanno 3 cifre esatte)."""
+    t = testo
+    # Punto tra cifre seguito da esattamente 3 cifre e poi non-cifra/fine
+    # stringa = separatore delle migliaia -> rimuovilo.
+    t = re.sub(r'(?<=\d)\.(?=\d{3}(?:\D|$))', '', t)
+    # Eventuale punto decimale residuo (1 o 2 cifre dopo) -> virgola italiana.
+    t = re.sub(r'(?<=\d)\.(?=\d{1,2}(?:\D|$))', ',', t)
+    return t
 
 
 def _pulisci_testo(testo):
@@ -224,7 +261,26 @@ def _pulisci_testo(testo):
     # Spazio dopo la punteggiatura se manca, ma solo se seguita da una
     # lettera (non da una cifra: protegge i numeri decimali tipo "3.14" o "3,5").
     t = re.sub(r'(?<=[.,!?;:])(?=[A-Za-zÀ-ÖØ-öø-ÿ])', ' ', t)
+    t = _pulisci_numeri(t)
     return t.strip()
+
+
+_TERMINALI_FRASE = ".!?"
+
+
+def _prepara_per_sintesi(blocco):
+    """Toglie la punteggiatura di fine frase (.!?) dal blocco prima di
+    passarlo a XTTS-v2: se il punto è l'ultimo carattere della stringa,
+    l'euristica interna del modello che distingue 'fine frase' da 'numero
+    decimale' va in confusione (niente testo dopo su cui fare il look-ahead)
+    e a volte legge il punto alla lettera, con un artefatto subito dopo
+    ('punto' + rumore). La pausa la creiamo comunque noi con il silenzio
+    inserito tra un blocco e l'altro in genera_audio(), quindi togliere il
+    punto finale non perde nulla."""
+    b = blocco.rstrip()
+    while b and b[-1] in _TERMINALI_FRASE:
+        b = b[:-1].rstrip()
+    return b
 
 
 def genera_audio(testo, percorso_wav=None, percorso_ogg=None, speaker_wav=None, speaker_name=None,
@@ -270,9 +326,10 @@ def genera_audio(testo, percorso_wav=None, percorso_ogg=None, speaker_wav=None, 
 
     for i, blocco in enumerate(blocchi, 1):
         log.debug(f"  blocco {i}/{len(blocchi)} ({len(blocco)} caratteri)...")
+        testo_blocco = _prepara_per_sintesi(blocco)
         try:
             onda = modello.tts(
-                text=blocco,
+                text=testo_blocco,
                 language=config.XTTS_LANGUAGE,
                 **kwargs_voce,
             )
