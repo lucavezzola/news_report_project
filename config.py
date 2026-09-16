@@ -195,6 +195,14 @@ XTTS_MAX_CHARS_PER_CHUNK = 200
 # stessa sezione, per una lettura più naturale.
 XTTS_SILENZIO_TRA_CHUNK_MS = 300
 
+# Velocità di lettura: 1.0 = normale, >1 più veloce, <1 più lento (es. 1.15
+# = 15% più veloce, 0.9 = 10% più lento). Applicata SOLO alla voce, PRIMA di
+# aggiungere la musica di sottofondo (musica.py) — così la musica resta al
+# suo tempo naturale, non viene accelerata/rallentata insieme al parlato.
+# Time-stretch puro via librosa: non cambia il pitch della voce.
+# Range utile: 0.5-2.0 (oltre questi valori l'audio inizia a suonare innaturale).
+XTTS_VELOCITA = 1.0
+
 # Su Windows, ctypes (usato internamente da torch per caricare le DLL native)
 # dal Python 3.8 in poi NON cerca più le dipendenze delle DLL nelle cartelle
 # elencate nel PATH di sistema (cambiamento di sicurezza contro il DLL
@@ -220,13 +228,13 @@ XTTS_MIN_VRAM_LIBERA_GB = 4.0
 # Metti MUSICA_ABILITATA = False per disattivare del tutto (nessuna musica,
 # solo voce, come prima di questa funzionalità).
 MUSICA_ABILITATA = True
-MUSICA_INTRO = "musica/intro.wav"
-MUSICA_CORPO = "musica/corpo.wav"
-MUSICA_OUTRO = "musica/outro.wav"
+MUSICA_INTRO = "musica/intro.mp3"
+MUSICA_CORPO = "musica/corpo.mp3"
+MUSICA_OUTRO = "musica/outro.mp3"
 
 # Volume del sottofondo mentre la voce parla (0 = silenzio, 1 = stesso
 # volume della voce). Tenerlo basso: deve "sentirsi" senza sovrastare il parlato.
-MUSICA_VOLUME_SOTTOFONDO = 0.2
+MUSICA_VOLUME_SOTTOFONDO = 0.18
 # Volume di intro/outro quando suonano da sole (senza voce sopra), può stare
 # più alto del sottofondo.
 MUSICA_VOLUME_INTRO_OUTRO = 0.7

@@ -299,6 +299,15 @@ def genera_audio(testo, percorso_wav=None, percorso_ogg=None, speaker_wav=None, 
 
     audio_completo = np.concatenate(pezzi_audio)
 
+    if config.XTTS_VELOCITA != 1.0:
+        # La velocità va applicata SOLO alla voce, prima di aggiungere la
+        # musica di sottofondo — altrimenti verrebbe accelerata/rallentata
+        # anche la musica insieme al parlato. Time-stretch puro (non cambia
+        # il pitch), via librosa (già una dipendenza di coqui-tts).
+        import librosa
+        log.info(f"Applico velocità di lettura alla voce: {config.XTTS_VELOCITA}x")
+        audio_completo = librosa.effects.time_stretch(audio_completo, rate=config.XTTS_VELOCITA)
+
     audio_completo = musica.applica_musica(
         audio_completo, SAMPLE_RATE,
         e_prima_sezione=e_prima_sezione,
