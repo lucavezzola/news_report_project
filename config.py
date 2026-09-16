@@ -52,15 +52,6 @@ FONTI = [
      "url": "https://news.google.com/rss/search?q=when:24h+allinurl:reuters.com+world&hl=en-US&gl=US&ceid=US:en",
      "verified": False},
 
-    # --- Economia ---
-    {"nome": "Il Sole 24 Ore - Italia", "categoria": "Economia",
-     "url": "https://www.ilsole24ore.com/rss/italia.xml", "verified": False},
-    {"nome": "Il Sole 24 Ore - Finanza", "categoria": "Economia",
-     "url": "https://www.ilsole24ore.com/rss/finanza.xml", "verified": False},
-    {"nome": "Reuters Business (workaround Google News)", "categoria": "Economia",
-     "url": "https://news.google.com/rss/search?q=when:24h+allinurl:reuters.com+business&hl=en-US&gl=US&ceid=US:en",
-     "verified": False},
-
     # --- Tecnologia ---
     {"nome": "Il Post - Tecnologia", "categoria": "Tecnologia",
      "url": "https://www.ilpost.it/tecnologia/feed/", "verified": False},
@@ -92,7 +83,6 @@ ROTAZIONE_QUOTIDIANI = {
 FONTI_SEMPRE_INCLUSE = {
     "ANSA - Politica", "ANSA - Cronaca", "AGI",
     "BBC News World", "Reuters World (workaround Google News)",
-    "Il Sole 24 Ore - Italia", "Il Sole 24 Ore - Finanza", "Reuters Business (workaround Google News)",
     "Il Post - Tecnologia", "Wired Italia", "Ars Technica", "Agenda Digitale",
     "Reuters Technology (workaround Google News)",
 }
@@ -100,14 +90,14 @@ FONTI_SEMPRE_INCLUSE = {
 # ---------------------------------------------------------------------------
 # SEZIONI DEL RESOCONTO (in ordine di lettura)
 # ---------------------------------------------------------------------------
-SEZIONI = ["Italia", "Esteri", "Economia", "Tecnologia"]
+SEZIONI = ["Italia", "Esteri", "Tecnologia"]
 
 # ---------------------------------------------------------------------------
 # VOCI PREFERITE PER SEZIONE
 # ---------------------------------------------------------------------------
 # Lista di voci predefinite di XTTS-v2 (vedi "python tts.py --list-speakers")
 # lette da voci_preferite.txt, una per riga. main.py assegna automaticamente
-# una voce diversa a ciascuna sezione (Italia, Esteri, Economia, Tecnologia),
+# una voce diversa a ciascuna sezione (Italia, Esteri, Tecnologia),
 # seguendo l'ordine di SEZIONI sopra. Se il file manca o è vuoto, si torna al
 # comportamento precedente (voice cloning da XTTS_SPEAKER_WAV per tutte le
 # sezioni, nessuna voce predefinita).

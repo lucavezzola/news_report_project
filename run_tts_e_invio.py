@@ -7,7 +7,7 @@ fix a tts.py/config.py, senza rifare fetch + chiamata a Claude.
 
 Uso:
     python run_tts_e_invio.py
-    python run_tts_e_invio.py -s Italia Economia   # solo alcune sezioni
+    python run_tts_e_invio.py -s Italia Tecnologia   # solo alcune sezioni
 """
 
 import argparse

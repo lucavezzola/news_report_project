@@ -73,7 +73,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--sezione",
         default="all",
-        help="Sezione da inviare (Italia, Esteri, Economia, Tecnologia) oppure 'all' per tutte."
+        help="Sezione da inviare (Italia, Esteri, Tecnologia) oppure 'all' per tutte."
     )
     args = parser.parse_args()
 

@@ -36,7 +36,7 @@ log = logging.getLogger("test_voci")
 
 TESTO_DI_PROVA_DEFAULT = (
     "Buongiorno, questo è un test per confrontare voci diverse nella rassegna "
-    "stampa. Oggi parliamo di politica, economia e tecnologia, con qualche "
+    "stampa. Oggi parliamo di politica, esteri e tecnologia, con qualche "
     "nome straniero come Uascington e Uiciat per verificare la pronuncia."
 )
 

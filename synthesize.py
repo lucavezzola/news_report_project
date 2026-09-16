@@ -2,7 +2,7 @@
 synthesize.py — Fase 2: sintesi imparziale degli articoli via Claude API.
 
 Prende la lista di articoli grezzi (da fetch.py) e produce il testo della
-rassegna DIVISO PER SEZIONE (Italia, Esteri, Economia, Tecnologia), così da
+rassegna DIVISO PER SEZIONE (Italia, Esteri, Tecnologia), così da
 poter generare un file audio separato per ciascuna sezione nella Fase 3.
 
 Richiede la variabile d'ambiente ANTHROPIC_API_KEY.
@@ -54,15 +54,15 @@ Devi rispondere SOLO con un oggetto JSON valido, senza testo prima o dopo, senza
 {"sezioni": [{"nome": "Italia", "testo": "..."}, {"nome": "Esteri", "testo": "..."}, ...]}
 
 Regole per il campo "sezioni":
-- Una voce per ogni sezione che ha notizie rilevanti oggi, nell'ordine: Italia, Esteri, Economia, Tecnologia.
+- Una voce per ogni sezione che ha notizie rilevanti oggi, nell'ordine: Italia, Esteri, Tecnologia.
 - Se una sezione non ha notizie rilevanti, ometti del tutto quella voce dall'array (non includerla con testo vuoto).
-- "nome" deve essere esattamente uno tra: "Italia", "Esteri", "Economia", "Tecnologia" (esattamente così, servirà al codice per salvare i file).
+- "nome" deve essere esattamente uno tra: "Italia", "Esteri", "Tecnologia" (esattamente così, servirà al codice per salvare i file).
 
 Regole per il campo "testo" di ciascuna sezione (fondamentali, perché verrà letto da un sintetizzatore vocale, UNA SEZIONE = UN FILE AUDIO SEPARATO):
 - Scrivi in prosa parlata: frasi brevi e scorrevoli, come se un giornalista radiofonico stesse leggendo in diretta.
 - NIENTE markdown, NIENTE elenchi puntati, NIENTE asterischi o simboli. Solo testo continuo.
-- Organizza il contenuto nelle sezioni, in quest'ordine: Italia, Esteri, Economia, Tecnologia.
-- IMPORTANTE: non scrivere mai il nome di una sezione da solo, isolato, come fosse un titolo (es. non scrivere mai semplicemente "ITALIA" o "Italia" su una riga a sé). Il testo deve essere prosa continua dall'inizio alla fine: ogni sezione, compresa la prima, deve iniziare con una frase parlata completa che introduce l'argomento, con la punteggiatura giusta (es. "Iniziamo dall'Italia." oppure "Passiamo all'economia."). Questo serve anche a creare una pausa naturale tra una sezione e l'altra quando il testo viene letto dal sintetizzatore vocale, che pausa in corrispondenza dei punti, non delle interruzioni di riga.
+- Organizza il contenuto nelle sezioni, in quest'ordine: Italia, Esteri, Tecnologia.
+- IMPORTANTE: non scrivere mai il nome di una sezione da solo, isolato, come fosse un titolo (es. non scrivere mai semplicemente "ITALIA" o "Italia" su una riga a sé). Il testo deve essere prosa continua dall'inizio alla fine: ogni sezione, compresa la prima, deve iniziare con una frase parlata completa che introduce l'argomento, con la punteggiatura giusta (es. "Iniziamo dall'Italia." oppure "Passiamo alla tecnologia."). Questo serve anche a creare una pausa naturale tra una sezione e l'altra quando il testo viene letto dal sintetizzatore vocale, che pausa in corrispondenza dei punti, non delle interruzioni di riga.
 - Se una sezione non ha notizie rilevanti quel giorno, salta la sezione senza commentarlo (non dire "oggi non ci sono notizie").
 - Apri il resoconto con un brevissimo saluto e la data, chiudi con un breve commiato.
 - La data di oggi ti verrà fornita esplicitamente nel messaggio dell'utente: usa esattamente quella, non calcolarla né dedurla da altre informazioni (articoli, training, ecc.).
@@ -156,7 +156,7 @@ def sintetizza(articoli, model=None):
 
     response = client.messages.create(
         model=model,
-        max_tokens=4000,
+        max_tokens=8000,
         system=SYSTEM_PROMPT,
         messages=[
             {
@@ -172,9 +172,24 @@ def sintetizza(articoli, model=None):
         ],
     )
 
+    log.info(
+        "Risposta Claude: stop_reason=%s, input_tokens=%s, output_tokens=%s",
+        response.stop_reason,
+        getattr(response.usage, "input_tokens", "n/d"),
+        getattr(response.usage, "output_tokens", "n/d"),
+    )
+
     testo_grezzo = "".join(
         block.text for block in response.content if block.type == "text"
     )
+
+    if response.stop_reason == "max_tokens":
+        log.error("Claude ha esaurito il limite di token prima di chiudere il JSON.")
+        log.error(f"Risposta grezza ricevuta (troncata):\n{testo_grezzo}")
+        raise RuntimeError(
+            "Claude ha troncato la risposta per il limite di token. "
+            "Riduci gli articoli o aumenta max_tokens in synthesize.py."
+        )
 
     try:
         dati = json.loads(_estrai_json(testo_grezzo))

@@ -42,9 +42,6 @@ Tutto orchestrato da uno **scheduler** (Task Scheduler di Windows) che lancia lo
 | Quotidiano IT (rotazione) | Corriere della Sera / Repubblica / Il Foglio / Il Giornale | Ruota settimanalmente per bilanciare il taglio editoriale nel tempo |
 | Estero | BBC News | Generalmente percepita come bilanciata |
 | Estero | Reuters | Taglio agenzia, buon complemento |
-| Economia | Il Sole 24 Ore | Quotidiano economico di riferimento in Italia |
-| Economia | Reuters Business | Taglio agenzia, buon complemento estero |
-| Economia | Milano Finanza | Alternativa/complemento a Il Sole 24 Ore |
 | Tech | Reuters Technology | Agenzia, taglio asciutto |
 | Tech | Il Post - Tecnologia | Divulgativo, equilibrato |
 | Tech | Wired Italia | Analitico, copre anche impatto sociale |
@@ -70,7 +67,7 @@ Tutto orchestrato da uno **scheduler** (Task Scheduler di Windows) che lancia lo
 3. Per ogni blocco:
    - Scrive i fatti condivisi in modo neutro.
    - Se le fonti divergono nel framing o nell'enfasi, lo segnala esplicitamente e nomina le fonti coinvolte.
-4. Organizza l'output in sezioni fisse: **Italia, Esteri, Economia, Tecnologia**.
+4. Organizza l'output in sezioni fisse: **Italia, Esteri, Tecnologia**.
 5. Scrive in **prosa parlata**: frasi brevi, niente elenchi puntati, niente markdown — deve suonare bene se letto ad alta voce.
 
 **Punto critico — istruzioni esplicite di imparzialità nel prompt:**

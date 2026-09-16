@@ -114,7 +114,7 @@ python run_tts_e_invio.py
 
 # solo alcune sezioni (es. dopo aver corretto a mano Italia)
 python run_tts_e_invio.py -s Italia
-python run_tts_e_invio.py -s Italia Economia
+python run_tts_e_invio.py -s Italia Tecnologia
 ```
 
 Se un file `testo_<Sezione>.txt` manca o è vuoto (es. sezione omessa quel giorno perché senza notizie), lo script la salta con un warning nel log, senza bloccare le altre.
@@ -135,7 +135,7 @@ Le istruzioni di imparzialità sono nel `SYSTEM_PROMPT` dentro `synthesize.py`. 
 
 Oltre all'imparzialità, il prompt include regole pensate specificamente per il sintetizzatore vocale, aggiunte dopo aver ascoltato i primi audio generati:
 - **Trascrizione fonetica** di nomi e parole straniere (es. "Musk" → "Mask", "software" → "sofuer"), *e* di nomi italiani con lettere non standard come la "j" (es. "Tajani" → "Taiani"), che XTTS-v2 altrimenti pronuncia in modo scorretto leggendoli con le regole di pronuncia italiane.
-- **Niente punto come separatore delle migliaia** nei numeri (es. non "1.500.000", meglio per esteso in lettere) e **niente abbreviazioni puntate** (es. non "ecc.", "dott.", "art."): XTTS-v2 a volte legge il punto alla lettera come la parola "punto" invece di riconoscerlo come fine frase o abbreviazione — un artefatto più frequente nei numeri (tipicamente nella sezione Economia).
+- **Niente punto come separatore delle migliaia** nei numeri (es. non "1.500.000", meglio per esteso in lettere) e **niente abbreviazioni puntate** (es. non "ecc.", "dott.", "art."): XTTS-v2 a volte legge il punto alla lettera come la parola "punto" invece di riconoscerlo come fine frase o abbreviazione.
 - **Frasi sotto circa 180 caratteri**: XTTS-v2 ha un limite tecnico fisso di 213 caratteri per l'italiano. Frasi via via più corte di quel limite lasciano margine al chunking in `tts.py` e riducono i casi in cui è necessario spezzare a metà frase senza una punteggiatura naturale su cui appoggiarsi.
 
 ## Problemi noti / Troubleshooting

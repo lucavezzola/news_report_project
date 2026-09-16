@@ -2,8 +2,8 @@
 main.py — Orchestratore della pipeline completa.
 
 Esegue in sequenza: fetch -> sintesi -> TTS -> invio Telegram.
-Genera e invia UN AUDIO SEPARATO PER OGNI SEZIONE (Italia, Esteri, Economia,
-Tecnologia), inviati come messaggi distinti in sequenza sul canale Telegram.
+Genera e invia UN AUDIO SEPARATO PER OGNI SEZIONE (Italia, Esteri, Tecnologia),
+inviati come messaggi distinti in sequenza sul canale Telegram.
 La prima sezione generata quel giorno riceve la musica di intro, l'ultima
 quella di outro (vedi musica.py e config.MUSICA_*).
 
