@@ -133,7 +133,7 @@ FINESTRA_ARTICOLI = timedelta(hours=24)   # solo articoli delle ultime 24h
 MAX_ARTICOLI_PER_FONTE = 25               # tetto per fonte, evita prompt enormi
 
 # Modello Claude da usare per la sintesi (vedi synthesize.py)
-CLAUDE_MODEL = "claude-sonnet-4-6"
+CLAUDE_MODEL = "claude-sonnet-5"
 
 # Percorsi file
 DIR_OUTPUT = "output"
