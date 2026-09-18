@@ -45,6 +45,9 @@ logging.basicConfig(
     ],
 )
 log = logging.getLogger("tts")
+# The root logger is kept at INFO for third-party libraries, but this module's
+# debug messages should still be visible in the terminal and log file.
+log.setLevel(logging.DEBUG)
 
 # Le librerie sotto XTTS-v2 (TTS, numba, matplotlib, transformers) loggano
 # parecchio a livello INFO (dettagli interni tipo "Text split into
@@ -325,8 +328,8 @@ def genera_audio(testo, percorso_wav=None, percorso_ogg=None, speaker_wav=None, 
     kwargs_voce = {"speaker": speaker_name} if speaker_name else {"speaker_wav": speaker_wav}
 
     for i, blocco in enumerate(blocchi, 1):
-        log.debug(f"  blocco {i}/{len(blocchi)} ({len(blocco)} caratteri)...")
         testo_blocco = _prepara_per_sintesi(blocco)
+        log.debug(f"blocco #{i}: {testo_blocco}")
         try:
             onda = modello.tts(
                 text=testo_blocco,
