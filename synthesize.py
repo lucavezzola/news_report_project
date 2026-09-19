@@ -93,22 +93,7 @@ Il sintetizzatore applica sempre le regole di pronuncia italiane, anche ai nomi 
 - Mai il punto come separatore delle migliaia (il TTS lo confonde con un decimale). Scrivi il numero in lettere per esteso, oppure senza punti se proprio necessario ("1500000").
 - Percentuali e decimali: usa la virgola, non il punto ("3,5%" non "3.5%").
 - Mai i puntini di sospensione ("..."). Per un pensiero sospeso, usa una virgola o riformula per esteso.
-</numeri_e_punteggiatura>
-
-<autoverifica_finale>
-Prima di produrre l'output definitivo, scorri mentalmente questa checklist:
-- Ho aggiunto un giudizio o un aggettivo mio non presente nelle fonti? → rimuovilo.
-- Ho appiattito due framing diversi in uno solo? → separali e nomina le fonti.
-- Ho citato la fonte per ogni dato specifico?
-- Ho segnalato le notizie a fonte singola?
-- Ho ripetuto la stessa notizia in due punti diversi? → unificala.
-- Ogni sezione inizia con una frase di transizione completa, non con il nome isolato?
-- Tutti i nomi stranieri (e i nomi italiani con j/k/w/x/y) sono trascritti foneticamente?
-- Ci sono punti come separatore delle migliaia, o puntini di sospensione? → correggili.
-- L'output è JSON puro, senza testo introduttivo, senza ```?
-
-Solo dopo questa verifica, produci il JSON finale.
-</autoverifica_finale>"""
+</numeri_e_punteggiatura>"""
 
 
 def _prepara_input_utente(articoli):
@@ -185,7 +170,7 @@ def sintetizza(articoli, model=None):
 
     response = client.messages.create(
         model=model,
-        max_tokens=8000,
+        max_tokens=1500,
         system=SYSTEM_PROMPT,
         messages=[
             {
