@@ -168,25 +168,24 @@ def sintetizza(articoli, model=None):
 
     data_oggi = _data_italiana_oggi()
 
-    response = client.messages.create(
-        model=model,
-        max_tokens=1500,
-        system=SYSTEM_PROMPT,
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    f"Oggi è {data_oggi}. Usa questa data esatta nel saluto di apertura "
-                    "(non calcolarla o dedurla in altro modo).\n\n"
-                    f"Numero di articoli raccolti: {numero_articoli}.\n\n"  # aiuta a calibrare sintesi vs dettaglio
-                    "Ecco gli articoli raccolti oggi, raggruppati per sezione. "
-                    "Ogni articolo riporta fonte e testo: usa la fonte per le attribuzioni richieste.\n\n"
-                    "Rispondi SOLO con il JSON richiesto nel system prompt.\n\n"
-                    + input_utente
-                )
-            }
-        ],
+    contenuto_utente = (
+        f"Oggi è {data_oggi}. Usa questa data esatta nel saluto di apertura "
+        "(non calcolarla o dedurla in altro modo).\n\n"
+        f"Numero di articoli raccolti: {numero_articoli}.\n\n"
+        "Ecco gli articoli raccolti oggi, raggruppati per sezione. "
+        "Ogni articolo riporta fonte e testo: usa la fonte per le attribuzioni richieste.\n\n"
+        "Rispondi SOLO con il JSON richiesto nel system prompt.\n\n"
+        + input_utente
     )
+
+    with client.messages.stream(
+        model=model,
+        max_tokens=32000,
+        system=SYSTEM_PROMPT,
+        messages=[{"role": "user", "content": contenuto_utente}],
+    ) as stream:
+        response = stream.get_final_message()
+    
 
     log.info(
         "Risposta Claude: stop_reason=%s, input_tokens=%s, output_tokens=%s",
