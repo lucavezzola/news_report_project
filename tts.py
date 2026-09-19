@@ -47,7 +47,7 @@ logging.basicConfig(
 log = logging.getLogger("tts")
 # The root logger is kept at INFO for third-party libraries, but this module's
 # debug messages should still be visible in the terminal and log file.
-log.setLevel(logging.DEBUG)
+# log.setLevel(logging.DEBUG)
 
 # Le librerie sotto XTTS-v2 (TTS, numba, matplotlib, transformers) loggano
 # parecchio a livello INFO (dettagli interni tipo "Text split into
