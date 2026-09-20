@@ -41,8 +41,7 @@ Tutto orchestrato da uno **scheduler** (Task Scheduler di Windows) che lancia lo
 | Agenzia IT | AGI | Alternativa/complemento ad ANSA |
 | Quotidiano IT (rotazione) | Corriere della Sera / Repubblica / Il Foglio / Il Giornale | Ruota settimanalmente per bilanciare il taglio editoriale nel tempo |
 | Estero | BBC News | Generalmente percepita come bilanciata |
-| Estero | Reuters | Taglio agenzia, buon complemento |
-| Tech | Reuters Technology | Agenzia, taglio asciutto |
+| Tech | Agenzia, taglio asciutto |
 | Tech | Il Post - Tecnologia | Divulgativo, equilibrato |
 | Tech | Wired Italia | Analitico, copre anche impatto sociale |
 | Tech | Ars Technica | Analitico/tecnico, poco sensazionalismo |

@@ -100,9 +100,7 @@ python main.py
 
 **Importante sulla Fase 1:** alcune fonti nel `config.py` sono marcate `"verified": False` — sono gli URL più probabili in base alle mie ricerche, ma non ho potuto verificarli in tempo reale (l'ambiente in cui ho scritto questo codice non ha accesso libero a internet). Alla prima esecuzione di `fetch.py` guarda il riepilogo finale in console/log: ti dirà esattamente quali fonti falliscono, così puoi:
 - cercare l'URL RSS corretto sul sito della fonte (di solito in fondo alla homepage, o `sito.it/rss`),
-- oppure rimuovere la fonte da `config.py` se non trovi un feed valido.
-
-**Nota su Reuters:** Reuters ha dismesso i feed RSS pubblici ufficiali da anni. Ho impostato un workaround via Google News (filtrato su reuters.com), marcato chiaramente nei commenti di `config.py`. È meno affidabile di un feed diretto: se noti risultati scarsi, valuta di toglierlo e affidarti solo a BBC/ANSA/AGI per l'estero, o di usare un servizio "RSS generator" di terze parti.
+- oppure rimuovere la fonte da `config.py` se non trovi un feed valido..
 
 ## Rilanciare solo TTS + invio (senza rifare fetch e sintesi)
 
