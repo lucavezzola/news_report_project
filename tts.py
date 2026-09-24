@@ -268,7 +268,7 @@ def _pulisci_testo(testo):
     return t.strip()
 
 
-_TERMINALI_FRASE = ".!?"
+_TERMINALI_FRASE = ".!?,"
 
 
 def _prepara_per_sintesi(blocco):
