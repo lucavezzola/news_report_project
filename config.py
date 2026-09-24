@@ -34,7 +34,7 @@ FONTI = [
     {"nome": "Il Foglio", "categoria": "Italia",
      "url": "https://naxos.ilfoglio.it/api/v5/rss/stories/latest", "verified": True},
     {"nome": "Il Giornale", "categoria": "Italia",
-     "url": "https://www.ilgiornale.it/feed", "verified": True},
+     "url": "https://www.ilgiornale.it/feed", "verified": False},
 
     # --- Estero ---
     {"nome": "BBC News World", "categoria": "Esteri",
@@ -114,7 +114,7 @@ def voce_per_sezione(nome_sezione):
 # PARAMETRI GENERALI
 # ---------------------------------------------------------------------------
 FINESTRA_ARTICOLI = timedelta(hours=24)   # solo articoli delle ultime 24h
-MAX_ARTICOLI_PER_FONTE = 25               # tetto per fonte, evita prompt enormi
+MAX_ARTICOLI_PER_FONTE = 28               # tetto per fonte, evita prompt enormi
 
 # Modello Claude da usare per la sintesi (vedi synthesize.py)
 CLAUDE_MODEL = "claude-sonnet-4-6"
