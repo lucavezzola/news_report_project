@@ -9,6 +9,7 @@ Modifica questo file per:
 
 from datetime import timedelta
 from pathlib import Path
+import random
 
 # ---------------------------------------------------------------------------
 # FONTI RSS
@@ -80,9 +81,8 @@ SEZIONI = ["Italia", "Esteri", "Tecnologia"]
 # VOCI PREFERITE PER SEZIONE
 # ---------------------------------------------------------------------------
 # Lista di voci predefinite di XTTS-v2 (vedi "python tts.py --list-speakers")
-# lette da voci_preferite.txt, una per riga. main.py assegna automaticamente
-# una voce diversa a ciascuna sezione (Italia, Esteri, Tecnologia),
-# seguendo l'ordine di SEZIONI sopra. Se il file manca o è vuoto, si torna al
+# lette da voci_preferite.txt, una per riga. A ogni sezione viene scelta
+# casualmente una voce dalla lista. Se il file manca o è vuoto, si torna al
 # comportamento precedente (voice cloning da XTTS_SPEAKER_WAV per tutte le
 # sezioni, nessuna voce predefinita).
 
@@ -102,13 +102,11 @@ XTTS_VOCI_PREFERITE = _carica_voci_preferite()
 
 
 def voce_per_sezione(nome_sezione):
-    """Ritorna il nome della voce predefinita da usare per questa sezione, o
-    None se non è stata configurata nessuna lista di voci preferite (in quel
-    caso tts.py userà il voice cloning di default da XTTS_SPEAKER_WAV)."""
+    """Sceglie casualmente la voce per questa sezione, o ritorna None se non
+    è stata configurata nessuna lista di voci preferite."""
     if not XTTS_VOCI_PREFERITE:
         return None
-    indice = SEZIONI.index(nome_sezione) % len(XTTS_VOCI_PREFERITE)
-    return XTTS_VOCI_PREFERITE[indice]
+    return random.choice(XTTS_VOCI_PREFERITE)
 
 # ---------------------------------------------------------------------------
 # PARAMETRI GENERALI
