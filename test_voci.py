@@ -29,6 +29,7 @@ import glob
 import logging
 import re
 from pathlib import Path
+import config
 
 import tts  # riusa modello, funzioni e logging già configurati in tts.py
 
@@ -68,6 +69,23 @@ def prova_voci_predefinite(testo, limite=None):
             print(f"  ERRORE su '{nome}', salto: {e}")
             log.error(f"Errore su voce predefinita '{nome}': {e}")
 
+def prova_voci_preferite(testo, limite=None):
+    nomi = config.XTTS_VOCI_PREFERITE
+    if limite:
+        nomi = nomi[:limite]
+
+    log.info(f"Provo {len(nomi)} voci preferite...")
+    for i, nome in enumerate(nomi, 1):
+        nome_file = _nome_file_sicuro(nome)
+        percorso_wav = CARTELLA_OUTPUT / f"preferita_{nome_file}.wav"
+        percorso_ogg = CARTELLA_OUTPUT / f"preferita_{nome_file}.ogg"
+        print(f"[{i}/{len(nomi)}] Voce preferita: {nome}")
+        try:
+            tts.genera_audio(testo, str(percorso_wav), str(percorso_ogg), speaker_name=nome)
+        except Exception as e:
+            print(f"  ERRORE su '{nome}', salto: {e}")
+            log.error(f"Errore su voce preferita '{nome}': {e}")
+
 
 def prova_voice_cloning(testo, cartella_clone):
     campioni = sorted(glob.glob(str(Path(cartella_clone) / "*.wav")))
@@ -106,23 +124,31 @@ if __name__ == "__main__":
         help="Testa solo i campioni di voice cloning, salta le voci predefinite.",
     )
     parser.add_argument(
+        "--solo-preferite", action="store_true",
+        help="Testa solo le voci preferite nel file letto da config.py.",
+    )
+    parser.add_argument(
         "--limite", type=int, default=None,
-        help="Testa solo le prime N voci predefinite (utile per un giro rapido).",
+        help="Testa solo le prime N voci (utile per un giro rapido).",
     )
     parser.add_argument(
         "--cartella-clone", default="xtts_reference",
         help="Cartella con i file .wav da usare per il voice cloning (default: xtts_reference/).",
     )
+
     args = parser.parse_args()
 
     CARTELLA_OUTPUT.mkdir(parents=True, exist_ok=True)
 
     print(f"Testo di prova: {args.testo}\n")
 
-    if not args.solo_clone:
-        prova_voci_predefinite(args.testo, limite=args.limite)
+    if args.solo_preferite:
+        prova_voci_preferite(args.testo, limite=args.limite)
+    else:
+        if not args.solo_clone:
+            prova_voci_predefinite(args.testo, limite=args.limite)
 
-    if not args.solo_predefinite:
-        prova_voice_cloning(args.testo, args.cartella_clone)
+        if not args.solo_predefinite:
+            prova_voice_cloning(args.testo, args.cartella_clone)
 
     print(f"\nCompletato. File generati in: {CARTELLA_OUTPUT}/")
