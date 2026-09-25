@@ -20,16 +20,9 @@ from time import mktime
 import feedparser
 
 import config
+from logging_config import configura_logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/fetch.log", encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
-)
-log = logging.getLogger("fetch")
+log = configura_logger("fetch", "fetch.log")
 
 
 def _fonti_di_oggi():

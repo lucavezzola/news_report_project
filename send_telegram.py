@@ -22,15 +22,9 @@ load_dotenv()  # legge TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID dal file .env, se p
 
 import requests
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/telegram.log", encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
-)
-log = logging.getLogger("telegram")
+from logging_config import configura_logger
+
+log = configura_logger("telegram", "telegram.log")
 
 
 def invia_audio(percorso_audio, didascalia=None):

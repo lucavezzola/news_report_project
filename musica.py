@@ -26,8 +26,9 @@ import numpy as np
 import soundfile as sf
 
 import config
+from logging_config import configura_logger
 
-log = logging.getLogger("musica")
+log = configura_logger("musica", "musica.log")
 
 _cache_tracce = {}
 
@@ -176,11 +177,6 @@ if __name__ == "__main__":
         help="Percorso del file wav di output (default: output/test_musica.wav).",
     )
     args = parser.parse_args()
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-    )
 
     SAMPLE_RATE_TEST = 24000  # stessa sample rate usata da XTTS-v2 in tts.py
 

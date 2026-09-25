@@ -113,6 +113,7 @@ def voce_per_sezione(nome_sezione):
 # ---------------------------------------------------------------------------
 FINESTRA_ARTICOLI = timedelta(hours=24)   # solo articoli delle ultime 24h
 MAX_ARTICOLI_PER_FONTE = 28               # tetto per fonte, evita prompt enormi
+LOG_DIMENSIONE_MASSIMA_MB = 10             # avviso all'avvio se un log supera questa dimensione
 
 # Modello Claude da usare per la sintesi (vedi synthesize.py)
 CLAUDE_MODEL = "claude-sonnet-4-6"

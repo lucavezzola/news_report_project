@@ -23,16 +23,9 @@ load_dotenv()
 import config
 import tts
 import send_telegram
+from logging_config import configura_logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/run_tts_e_invio.log", encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
-)
-log = logging.getLogger("run_tts_e_invio")
+log = configura_logger("run_tts_e_invio", "run_tts_e_invio.log")
 
 
 def carica_sezioni_da_file(nomi_sezioni):

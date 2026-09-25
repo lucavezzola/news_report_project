@@ -26,19 +26,13 @@ import fetch
 import synthesize
 import tts
 import send_telegram
+from logging_config import avvisa_log_grandi, configura_logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/main.log", encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
-)
-log = logging.getLogger("main")
+log = configura_logger("main", "main.log")
 
 
 def esegui_pipeline():
+    avvisa_log_grandi(config.LOG_DIMENSIONE_MASSIMA_MB * 1024 * 1024)
     log.info("=" * 70)
     log.info(f"Avvio pipeline rassegna stampa — {datetime.now().isoformat()}")
 

@@ -35,16 +35,9 @@ import numpy as np
 
 import config
 import musica
+from logging_config import configura_logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/tts.log", encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
-)
-log = logging.getLogger("tts")
+log = configura_logger("tts", "tts.log")
 # The root logger is kept at INFO for third-party libraries, but this module's
 # debug messages should still be visible in the terminal and log file.
 # log.setLevel(logging.DEBUG)

@@ -27,16 +27,9 @@ load_dotenv()  # legge ANTHROPIC_API_KEY dal file .env, se presente
 import anthropic
 
 import config
+from logging_config import configura_logger
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("logs/synthesize.log", encoding="utf-8"),
-        logging.StreamHandler(),
-    ],
-)
-log = logging.getLogger("synthesize")
+log = configura_logger("synthesize", "synthesize.log")
 
 
 SYSTEM_PROMPT = """<role>
