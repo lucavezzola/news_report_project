@@ -19,7 +19,7 @@ Uso da main.py:
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 load_dotenv()  # legge ANTHROPIC_API_KEY dal file .env, se presente
@@ -33,7 +33,7 @@ log = configura_logger("synthesize", "synthesize.log")
 
 
 SYSTEM_PROMPT = """<role>
-Sei un redattore che prepara una rassegna stampa audio giornaliera per un piccolo gruppo di ascoltatori italiani. Il tuo output verrà letto da un sintetizzatore vocale (TTS), non da un essere umano che legge testo scritto: questo vincola fortemente come devi scrivere.
+Sei un redattore che prepara una rassegna stampa audio per un piccolo gruppo di ascoltatori italiani. Il tuo output verrà letto da un sintetizzatore vocale (TTS), non da un essere umano che legge testo scritto: questo vincola fortemente come devi scrivere.
 </role>
 
 <regole_critiche>
@@ -58,7 +58,7 @@ Schema:
 Vincoli sullo schema:
 - Ordine fisso: Italia, Esteri, Tecnologia.
 - "nome" deve essere esattamente una di queste tre stringhe (serve al codice a valle per salvare i file).
-- Se una sezione non ha notizie rilevanti oggi, ometti del tutto quella voce dall'array. Non includerla con testo vuoto, non scrivere "oggi non ci sono notizie".
+- Se una sezione non ha notizie rilevanti nel periodo coperto, ometti del tutto quella voce dall'array. Non includerla con testo vuoto.
 </formato_output>
 
 <scrittura_testo_per_tts>
@@ -111,16 +111,20 @@ def _prepara_input_utente(articoli):
     return "\n".join(blocchi)
 
 
-GIORNI_IT = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"]
 MESI_IT = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
            "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
 
 
-def _data_italiana_oggi():
-    """Restituisce la data odierna formattata in italiano (es. 'domenica 13 settembre 2026'),
-    senza dipendere da locale di sistema (spesso non configurato in italiano su Windows)."""
-    oggi = datetime.now()
-    return f"{GIORNI_IT[oggi.weekday()]} {oggi.day} {MESI_IT[oggi.month - 1]} {oggi.year}"
+def _data_italiana(data):
+    return f"{data.day} {MESI_IT[data.month - 1]} {data.year}"
+
+
+def formatta_intervallo(ora_fine, giorni):
+    """Descrive l'intervallo del report in italiano."""
+    if giorni == 1:
+        return "ultime 24 ore"
+    ora_inizio = ora_fine - timedelta(days=giorni)
+    return f"dal {_data_italiana(ora_inizio.astimezone())} al {_data_italiana(ora_fine.astimezone())}"
 
 
 def _estrai_json(testo_grezzo):
@@ -138,9 +142,9 @@ def _estrai_json(testo_grezzo):
     return t
 
 
-def sintetizza(articoli, model=None):
+def sintetizza(articoli, model=None, giorni=1, ora_fine=None):
     """Chiama Claude API e restituisce una lista di dict {"nome": ..., "testo": ...},
-    una voce per sezione con notizie rilevanti oggi."""
+    una voce per sezione con notizie rilevanti nel periodo selezionato."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise RuntimeError(
             "Variabile d'ambiente ANTHROPIC_API_KEY non impostata. "
@@ -159,13 +163,25 @@ def sintetizza(articoli, model=None):
 
     log.info(f"Invio {numero_articoli} articoli a Claude ({model}) per la sintesi...")
 
-    data_oggi = _data_italiana_oggi()
+    ora_fine = ora_fine or datetime.now().astimezone()
+    data_oggi = _data_italiana(ora_fine.astimezone())
+    periodo = formatta_intervallo(ora_fine, giorni)
+
+    if giorni == 1:
+        istruzioni_periodo = (
+            f"Le notizie coprono le ultime 24 ore. Oggi è {data_oggi}. "
+            "Usa questa data esatta nel saluto di apertura (non calcolarla o dedurla).\n\n"
+        )
+    else:
+        istruzioni_periodo = (
+            f"Le notizie coprono il periodo {periodo}. Comunica chiaramente questo "
+            "intervallo nell'apertura parlata della prima sezione. "
+            f"La data odierna è {data_oggi}: usala nel saluto senza calcolarla o dedurla.\n\n"
+        )
 
     contenuto_utente = (
-        f"Oggi è {data_oggi}. Usa questa data esatta nel saluto di apertura "
-        "(non calcolarla o dedurla in altro modo).\n\n"
-        f"Numero di articoli raccolti: {numero_articoli}.\n\n"
-        "Ecco gli articoli raccolti oggi, raggruppati per sezione. "
+        istruzioni_periodo + f"Numero di articoli raccolti: {numero_articoli}.\n\n"
+        f"Ecco gli articoli raccolti nel periodo {periodo}, raggruppati per sezione. "
         "Ogni articolo riporta fonte e testo: usa la fonte per le attribuzioni richieste.\n\n"
         "Rispondi SOLO con il JSON richiesto nel system prompt.\n\n"
         + input_utente

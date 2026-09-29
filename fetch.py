@@ -1,8 +1,8 @@
 """
 fetch.py — Fase 1: raccolta articoli dai feed RSS.
 
-Scarica ogni fonte configurata in config.py, tiene solo gli articoli delle
-ultime 24h (o FINESTRA_ARTICOLI), e salva tutto in un JSON intermedio.
+Scarica ogni fonte configurata in config.py, tiene solo gli articoli
+nell'intervallo selezionato e salva tutto in un JSON intermedio.
 
 Uso da terminale (per test manuale, indipendente dalla pipeline completa):
     python fetch.py
@@ -14,8 +14,8 @@ Uso da main.py:
 
 import json
 import logging
-from datetime import datetime, timezone
-from time import mktime
+from datetime import datetime, timedelta, timezone
+from calendar import timegm
 
 import feedparser
 
@@ -25,17 +25,29 @@ from logging_config import configura_logger
 log = configura_logger("fetch", "fetch.log")
 
 
-def _fonti_di_oggi():
-    """Applica la rotazione settimanale dei quotidiani generalisti e
-    restituisce l'elenco effettivo di fonti da interrogare oggi."""
-    oggi = datetime.now().weekday()  # 0=lunedì
-    quotidiano_di_turno = config.ROTAZIONE_QUOTIDIANI.get(oggi)
+def _fonti_di_oggi(ora_fine=None, giorni=1):
+    """Restituisce le fonti attive nei giorni di calendario coperti."""
+    ora_fine = ora_fine or datetime.now().astimezone()
+    oggi = ora_fine.astimezone().date()
+    if giorni == 1:
+        giorni_coperti = {oggi.weekday()}
+    else:
+        data = (ora_fine - timedelta(days=giorni)).astimezone().date()
+        giorni_coperti = set()
+        while data <= oggi:
+            giorni_coperti.add(data.weekday())
+            data += timedelta(days=1)
+    quotidiani_di_turno = {
+        config.ROTAZIONE_QUOTIDIANI[giorno]
+        for giorno in giorni_coperti
+        if giorno in config.ROTAZIONE_QUOTIDIANI
+    }
 
     fonti_attive = []
     for fonte in config.FONTI:
         if fonte["nome"] in config.FONTI_SEMPRE_INCLUSE:
             fonti_attive.append(fonte)
-        elif fonte["nome"] == quotidiano_di_turno:
+        elif fonte["nome"] in quotidiani_di_turno:
             fonti_attive.append(fonte)
         # le altre fonti in rotazione ma non di turno oggi vengono saltate
     return fonti_attive
@@ -48,16 +60,24 @@ def _entry_e_recente(entry, ora_limite):
     struct = entry.get("published_parsed") or entry.get("updated_parsed")
     if not struct:
         return True
-    dt = datetime.fromtimestamp(mktime(struct), tz=timezone.utc)
+    dt = datetime.fromtimestamp(timegm(struct), tz=timezone.utc)
     return dt >= ora_limite
 
 
-def raccogli_articoli():
+def raccogli_articoli(giorni=1, ora_fine=None):
     """Interroga tutte le fonti attive di oggi e restituisce una lista di
-    dizionari: {fonte, categoria, titolo, link, data, estratto}."""
-    ora_limite = datetime.now(timezone.utc) - config.FINESTRA_ARTICOLI
-    fonti_attive = _fonti_di_oggi()
-    log.info(f"Fonti attive oggi: {len(fonti_attive)}/{len(config.FONTI)}")
+    dizionari: {fonte, categoria, titolo, link, data, estratto} nel periodo
+    delle ultime 24 * giorni ore."""
+    if giorni < 1:
+        raise ValueError("Il numero di giorni deve essere almeno 1.")
+    ora_fine = ora_fine or datetime.now(timezone.utc)
+    ora_limite = ora_fine.astimezone(timezone.utc) - config.FINESTRA_ARTICOLI * giorni
+    limite_articoli = config.MAX_ARTICOLI_PER_FONTE * giorni
+    fonti_attive = _fonti_di_oggi(ora_fine, giorni)
+    log.info(f"Fonti attive: {len(fonti_attive)}/{len(config.FONTI)}")
+    log.info(
+        f"Raccolta ultime {24 * giorni} ore; massimo {limite_articoli} articoli per fonte"
+    )
 
     tutti_articoli = []
     fonti_ok, fonti_ko = [], []
@@ -78,7 +98,7 @@ def raccogli_articoli():
                 raise ValueError("nessun articolo restituito dal feed")
 
             recenti = [e for e in feed.entries if _entry_e_recente(e, ora_limite)]
-            recenti = recenti[: config.MAX_ARTICOLI_PER_FONTE]
+            recenti = recenti[:limite_articoli]
 
             for entry in recenti:
                 tutti_articoli.append({
@@ -91,7 +111,7 @@ def raccogli_articoli():
                 })
 
             fonti_ok.append(f"{nome} ({len(recenti)} articoli)")
-            log.info(f"OK  {nome}: {len(recenti)} articoli nelle ultime 24h")
+            log.info(f"OK  {nome}: {len(recenti)} articoli nelle ultime {24 * giorni}h")
 
         except Exception as e:
             fonti_ko.append(f"{nome}: {e}")
