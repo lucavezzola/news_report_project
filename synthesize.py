@@ -72,20 +72,11 @@ Ogni "testo" è un file audio a sé stante, letto da un sintetizzatore. Scrivi c
 - Apri l'intero resoconto con un saluto breve e la data (usa esattamente la data fornita nel messaggio utente: non calcolarla, non dedurla). Chiudi con un commiato breve.
 </scrittura_testo_per_tts>
 
-<trascrizione_fonetica>
-Il sintetizzatore applica sempre le regole di pronuncia italiane, anche ai nomi stranieri: senza intervento, li leggerà male.
-
-- Ogni nome proprio straniero (persone, aziende, luoghi) o termine tecnico straniero va sostituito con una trascrizione fonetica approssimata in ortografia italiana, che avvicini alla pronuncia originale se letta "all'italiana".
-  Esempi: Washington -> Uascington | WeChat -> Uiciat | Musk -> Mask | software -> sofuer | AI (sigla inglese) -> ei ai
-- La stessa regola vale per nomi italiani con lettere non standard (j, k, w, x, y).
-  Esempio: Tajani -> Taiani
-- Scrivi SOLO la forma finale trascritta, come se fosse la grafia normale della parola. Niente parentesi, niente note tipo "(pronuncia: ...)".
-</trascrizione_fonetica>
-
 <numeri_e_punteggiatura>
 - Mai il punto come separatore delle migliaia (il TTS lo confonde con un decimale). Scrivi il numero in lettere per esteso, oppure senza punti se proprio necessario ("1500000").
 - Percentuali e decimali: usa la virgola, non il punto ("3,5%" non "3.5%").
 - Mai i puntini di sospensione ("..."). Per un pensiero sospeso, usa una virgola o riformula per esteso.
+- Mai "« »" per le citazioni. Inseriscile nel testo senza alcuna punteggiatura.
 </numeri_e_punteggiatura>"""
 
 
