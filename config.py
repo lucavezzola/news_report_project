@@ -121,6 +121,7 @@ CLAUDE_MODEL = "claude-sonnet-4-6"
 # Percorsi file
 DIR_OUTPUT = "output"
 FILE_JSON_GREZZO = "output/articoli_grezzi.json"
+FILE_ULTIMA_CHIAMATA = "output/ultima_chiamata.txt"
 
 
 def percorso_testo_sezione(nome_sezione):

@@ -99,6 +99,9 @@ python main.py
 
 # Rassegna con le notizie delle ultime 48 ore
 python main.py 2
+
+# Rassegna da quando è stata avviata l'ultima esecuzione di main.py
+python main.py --da-ultima-chiamata
 ```
 
 Il parametro facoltativo di `main.py` indica quanti intervalli di 24 ore includere:
@@ -106,6 +109,11 @@ senza parametro, oppure con `1`, vengono raccolte le ultime 24 ore. Con `2` le
 ultime 48 ore, e così via. Per più giorni il testo letto e la didascalia Telegram
 indicano le date iniziale e finale del periodo. Il limite massimo per fonte cresce
 in proporzione (28 articoli per fonte per ogni giorno selezionato).
+
+`--da-ultima-chiamata` raccoglie le notizie dall'avvio dell'ultima esecuzione di
+`main.py`, includendo anche le ore. Prima di procedere mostra giorni e ore
+trascorsi e chiede conferma. Esegui prima `python main.py` almeno una volta;
+ogni esecuzione accettata aggiorna il timestamp in `output/ultima_chiamata.txt`.
 
 **Importante sulla Fase 1:** alcune fonti nel `config.py` sono marcate `"verified": False` — sono gli URL più probabili in base alle mie ricerche, ma non ho potuto verificarli in tempo reale (l'ambiente in cui ho scritto questo codice non ha accesso libero a internet). Alla prima esecuzione di `fetch.py` guarda il riepilogo finale in console/log: ti dirà esattamente quali fonti falliscono, così puoi:
 - cercare l'URL RSS corretto sul sito della fonte (di solito in fondo alla homepage, o `sito.it/rss`),

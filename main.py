@@ -18,6 +18,7 @@ import logging
 import sys
 import traceback
 from datetime import datetime, timezone
+from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()  # carica ANTHROPIC_API_KEY, TELEGRAM_BOT_TOKEN, ecc. da .env se presente
@@ -32,12 +33,12 @@ from logging_config import avvisa_log_grandi, configura_logger
 log = configura_logger("main", "main.log")
 
 
-def esegui_pipeline(giorni=1):
+def esegui_pipeline(giorni=1, ora_inizio=None):
     if giorni < 1:
         raise ValueError("Il numero di giorni deve essere almeno 1.")
 
     ora_fine = datetime.now(timezone.utc)
-    periodo = synthesize.formatta_intervallo(ora_fine, giorni)
+    periodo = synthesize.formatta_intervallo(ora_fine, giorni, ora_inizio=ora_inizio)
     avvisa_log_grandi(config.LOG_DIMENSIONE_MASSIMA_MB * 1024 * 1024)
     log.info("=" * 70)
     log.info(f"Avvio pipeline rassegna stampa — {ora_fine.isoformat()}")
@@ -45,7 +46,9 @@ def esegui_pipeline(giorni=1):
 
     # --- Fase 1: fetch ---
     log.info("Fase 1/4: raccolta articoli...")
-    articoli = fetch.raccogli_articoli(giorni=giorni, ora_fine=ora_fine)
+    articoli = fetch.raccogli_articoli(
+        giorni=giorni, ora_fine=ora_fine, ora_inizio=ora_inizio
+    )
     fetch.salva_json(articoli)
     if not articoli:
         log.error("Nessun articolo raccolto. Interrompo la pipeline.")
@@ -53,7 +56,9 @@ def esegui_pipeline(giorni=1):
 
     # --- Fase 2: sintesi (una voce di testo per sezione) ---
     log.info("Fase 2/4: sintesi con Claude...")
-    sezioni = synthesize.sintetizza(articoli, giorni=giorni, ora_fine=ora_fine)
+    sezioni = synthesize.sintetizza(
+        articoli, giorni=giorni, ora_fine=ora_fine, ora_inizio=ora_inizio
+    )
     synthesize.salva_sezioni(sezioni)
     if not sezioni:
         log.error("Nessuna sezione generata. Interrompo la pipeline.")
@@ -87,7 +92,7 @@ def esegui_pipeline(giorni=1):
 
             log.info(f"Fase 4/4: invio sezione '{nome}' su Telegram...")
             didascalia = (
-                f"{nome} — {periodo}" if giorni > 1
+                f"{nome} — {periodo}" if giorni > 1 or ora_inizio is not None
                 else f"{nome} — {data_oggi_breve}"
             )
             send_telegram.invia_audio(percorso_audio, didascalia=didascalia)
@@ -102,6 +107,23 @@ def esegui_pipeline(giorni=1):
 
 
 if __name__ == "__main__":
+    def leggi_ultima_chiamata():
+        percorso = Path(config.FILE_ULTIMA_CHIAMATA)
+        if not percorso.exists():
+            return None
+        try:
+            ora = datetime.fromisoformat(percorso.read_text(encoding="utf-8").strip())
+            if ora.tzinfo is None:
+                raise ValueError("timestamp senza fuso orario")
+            return ora.astimezone(timezone.utc)
+        except (OSError, ValueError) as errore:
+            raise ValueError(f"Timestamp dell'ultima chiamata non valido: {errore}")
+
+    def salva_ultima_chiamata(ora):
+        percorso = Path(config.FILE_ULTIMA_CHIAMATA)
+        percorso.parent.mkdir(parents=True, exist_ok=True)
+        percorso.write_text(ora.isoformat(), encoding="utf-8")
+
     parser = argparse.ArgumentParser(description="Genera e invia la rassegna stampa audio.")
     parser.add_argument(
         "giorni",
@@ -111,12 +133,46 @@ if __name__ == "__main__":
         metavar="GIORNI",
         help="giorni di notizie da includere (1 = ultime 24 ore; default: 1)",
     )
+    parser.add_argument(
+        "--da-ultima-chiamata",
+        action="store_true",
+        help="raccoglie le notizie dall'ultima esecuzione di main.py, dopo conferma",
+    )
     args = parser.parse_args()
     if args.giorni < 1:
         parser.error("GIORNI deve essere almeno 1")
 
     try:
-        esegui_pipeline(giorni=args.giorni)
+        ora_chiamata = datetime.now(timezone.utc)
+        ora_inizio = None
+        if args.da_ultima_chiamata:
+            ora_inizio = leggi_ultima_chiamata()
+            if ora_inizio is None:
+                parser.error(
+                    "nessuna chiamata precedente registrata; esegui prima python main.py"
+                )
+            durata = ora_chiamata - ora_inizio
+            if durata.total_seconds() < 0:
+                parser.error("l'ultima chiamata risulta nel futuro; controlla l'orologio di sistema")
+            giorni_trascorsi, resto = divmod(int(durata.total_seconds()), 24 * 60 * 60)
+            ore_trascorse = resto // (60 * 60)
+            testo_giorni = "giorno" if giorni_trascorsi == 1 else "giorni"
+            testo_ore = "ora" if ore_trascorse == 1 else "ore"
+            print(
+                f"Dall'ultima chiamata: {giorni_trascorsi} {testo_giorni} e "
+                f"{ore_trascorse} {testo_ore}. Vuoi procedere? [s/N]",
+                end=" ",
+                flush=True,
+            )
+            if input().strip().lower() not in {"s", "si", "sì", "y", "yes"}:
+                print("Operazione annullata.")
+                sys.exit(0)
+            giorni_pipeline = max(1, (int(durata.total_seconds()) + 86399) // 86400)
+        else:
+            giorni_pipeline = args.giorni
+
+        salva_ultima_chiamata(ora_chiamata)
+        esegui_pipeline(giorni=giorni_pipeline, ora_inizio=ora_inizio)
     except Exception:
         log.error("Pipeline interrotta da un errore:\n" + traceback.format_exc())
         sys.exit(1)

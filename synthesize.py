@@ -119,8 +119,15 @@ def _data_italiana(data):
     return f"{data.day} {MESI_IT[data.month - 1]} {data.year}"
 
 
-def formatta_intervallo(ora_fine, giorni):
+def formatta_intervallo(ora_fine, giorni, ora_inizio=None):
     """Descrive l'intervallo del report in italiano."""
+    if ora_inizio is not None:
+        inizio_locale = ora_inizio.astimezone()
+        fine_locale = ora_fine.astimezone()
+        return (
+            f"dal {_data_italiana(inizio_locale)} alle {inizio_locale:%H:%M} "
+            f"al {_data_italiana(fine_locale)} alle {fine_locale:%H:%M}"
+        )
     if giorni == 1:
         return "ultime 24 ore"
     ora_inizio = ora_fine - timedelta(days=giorni)
@@ -142,7 +149,7 @@ def _estrai_json(testo_grezzo):
     return t
 
 
-def sintetizza(articoli, model=None, giorni=1, ora_fine=None):
+def sintetizza(articoli, model=None, giorni=1, ora_fine=None, ora_inizio=None):
     """Chiama Claude API e restituisce una lista di dict {"nome": ..., "testo": ...},
     una voce per sezione con notizie rilevanti nel periodo selezionato."""
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -165,9 +172,9 @@ def sintetizza(articoli, model=None, giorni=1, ora_fine=None):
 
     ora_fine = ora_fine or datetime.now().astimezone()
     data_oggi = _data_italiana(ora_fine.astimezone())
-    periodo = formatta_intervallo(ora_fine, giorni)
+    periodo = formatta_intervallo(ora_fine, giorni, ora_inizio=ora_inizio)
 
-    if giorni == 1:
+    if giorni == 1 and ora_inizio is None:
         istruzioni_periodo = (
             f"Le notizie coprono le ultime 24 ore. Oggi è {data_oggi}. "
             "Usa questa data esatta nel saluto di apertura (non calcolarla o dedurla).\n\n"

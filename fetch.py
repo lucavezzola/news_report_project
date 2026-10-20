@@ -25,11 +25,17 @@ from logging_config import configura_logger
 log = configura_logger("fetch", "fetch.log")
 
 
-def _fonti_di_oggi(ora_fine=None, giorni=1):
+def _fonti_di_oggi(ora_fine=None, giorni=1, ora_inizio=None):
     """Restituisce le fonti attive nei giorni di calendario coperti."""
     ora_fine = ora_fine or datetime.now().astimezone()
     oggi = ora_fine.astimezone().date()
-    if giorni == 1:
+    if ora_inizio is not None:
+        data = ora_inizio.astimezone().date()
+        giorni_coperti = set()
+        while data <= oggi:
+            giorni_coperti.add(data.weekday())
+            data += timedelta(days=1)
+    elif giorni == 1:
         giorni_coperti = {oggi.weekday()}
     else:
         data = (ora_fine - timedelta(days=giorni)).astimezone().date()
@@ -64,19 +70,23 @@ def _entry_e_recente(entry, ora_limite):
     return dt >= ora_limite
 
 
-def raccogli_articoli(giorni=1, ora_fine=None):
+def raccogli_articoli(giorni=1, ora_fine=None, ora_inizio=None):
     """Interroga tutte le fonti attive di oggi e restituisce una lista di
     dizionari: {fonte, categoria, titolo, link, data, estratto} nel periodo
-    delle ultime 24 * giorni ore."""
+    delle ultime 24 * giorni ore oppure dall'ora_inizio indicata."""
     if giorni < 1:
         raise ValueError("Il numero di giorni deve essere almeno 1.")
     ora_fine = ora_fine or datetime.now(timezone.utc)
-    ora_limite = ora_fine.astimezone(timezone.utc) - config.FINESTRA_ARTICOLI * giorni
+    ora_limite = (
+        ora_inizio.astimezone(timezone.utc)
+        if ora_inizio is not None
+        else ora_fine.astimezone(timezone.utc) - config.FINESTRA_ARTICOLI * giorni
+    )
     limite_articoli = config.MAX_ARTICOLI_PER_FONTE * giorni
-    fonti_attive = _fonti_di_oggi(ora_fine, giorni)
+    fonti_attive = _fonti_di_oggi(ora_fine, giorni, ora_inizio=ora_inizio)
     log.info(f"Fonti attive: {len(fonti_attive)}/{len(config.FONTI)}")
     log.info(
-        f"Raccolta ultime {24 * giorni} ore; massimo {limite_articoli} articoli per fonte"
+        f"Raccolta da {ora_limite.isoformat()}; massimo {limite_articoli} articoli per fonte"
     )
 
     tutti_articoli = []
@@ -111,7 +121,7 @@ def raccogli_articoli(giorni=1, ora_fine=None):
                 })
 
             fonti_ok.append(f"{nome} ({len(recenti)} articoli)")
-            log.info(f"OK  {nome}: {len(recenti)} articoli nelle ultime {24 * giorni}h")
+            log.info(f"OK  {nome}: {len(recenti)} articoli dal {ora_limite.isoformat()}")
 
         except Exception as e:
             fonti_ko.append(f"{nome}: {e}")
