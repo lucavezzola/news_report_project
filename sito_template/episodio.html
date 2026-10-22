@@ -61,7 +61,7 @@
     <article id="{{ n.id }}">
       <h3>{{ n.titolo }}{% if n.fonte_singola %} <span class="badge" title="Questa notizia compare in una sola testata">fonte singola</span>{% endif %}</h3>
       <p class="testo">{% for f in n.frasi %}<span class="frase" role="button" tabindex="0" data-inizio="{{ f.inizio }}" data-fine="{{ f.fine }}">{{ f.testo }}</span> {% endfor %}</p>
-      <details class="fonti" open>
+      <details class="fonti" closed>
         <summary>Fonti</summary>
         <ul>
           {% for fonte in n.fonti %}
