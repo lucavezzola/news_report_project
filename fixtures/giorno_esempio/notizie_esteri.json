@@ -1,0 +1,25 @@
+{
+  "nome": "Esteri",
+  "notizie": [
+    {
+      "titolo": "Vertice a Washington",
+      "fonti": [
+        "b000000001"
+      ],
+      "frasi": [
+        {
+          "testo": "La BBC riferisce di un vertice a Washington tra i leader.",
+          "entita": [],
+          "luoghi": [
+            {
+              "nome": "Washington",
+              "tipo": "citta",
+              "paese": "US",
+              "menzione": "Washington"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

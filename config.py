@@ -41,6 +41,14 @@ FONTI = [
     {"nome": "BBC News World", "categoria": "Esteri",
      "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "verified": True},
 
+    # --- Economia (URL da verificare con fetch.py: i feed non sono stati testati) ---
+    {"nome": "ANSA - Economia", "categoria": "Economia",
+     "url": "https://www.ansa.it/sito/notizie/economia/economia_rss.xml", "verified": False},
+    {"nome": "BBC News Business", "categoria": "Economia",
+     "url": "http://feeds.bbci.co.uk/news/business/rss.xml", "verified": False},
+    {"nome": "Il Post - Economia", "categoria": "Economia",
+     "url": "https://www.ilpost.it/economia/feed/", "verified": False},
+
     # --- Tecnologia ---
     {"nome": "Il Post - Tecnologia", "categoria": "Tecnologia",
      "url": "https://www.ilpost.it/tecnologia/feed/", "verified": True},
@@ -69,13 +77,18 @@ ROTAZIONE_QUOTIDIANI = {
 FONTI_SEMPRE_INCLUSE = {
     "ANSA - Politica", "ANSA - Cronaca", "AGI",
     "BBC News World", "Il Post - Tecnologia",
+    "ANSA - Economia", "BBC News Business", "Il Post - Economia",
     "Wired Italia", "Ars Technica", "Agenda Digitale",
 }
 
 # ---------------------------------------------------------------------------
 # SEZIONI DEL RESOCONTO (in ordine di lettura)
 # ---------------------------------------------------------------------------
-SEZIONI = ["Italia", "Esteri", "Tecnologia"]
+SEZIONI = ["Italia", "Esteri", "Economia", "Tecnologia"]
+
+# Slug usato in id, nomi di file e URL (niente accenti/spazi)
+def slug_sezione(nome_sezione):
+    return nome_sezione.strip().lower().replace(" ", "-")
 
 # ---------------------------------------------------------------------------
 # VOCI PREFERITE PER SEZIONE
@@ -118,22 +131,175 @@ LOG_DIMENSIONE_MASSIMA_MB = 10             # avviso all'avvio se un log supera q
 # Modello Claude da usare per la sintesi (vedi synthesize.py)
 CLAUDE_MODEL = "claude-sonnet-4-6"
 
-# Percorsi file
+# ---------------------------------------------------------------------------
+# PERCORSI PER DATA (output/AAAA-MM-GG/)
+# ---------------------------------------------------------------------------
+# Ogni fase scrive i suoi file nella cartella del giorno e può essere
+# rilanciata da sola (main.py --da-fase N). La data corrente si cambia con
+# imposta_data() (main.py --data AAAA-MM-GG); di default è oggi.
+from datetime import date as _date
+
 DIR_OUTPUT = "output"
-FILE_JSON_GREZZO = "output/articoli_grezzi.json"
-FILE_ULTIMA_CHIAMATA = "output/ultima_chiamata.txt"
+FILE_ULTIMA_CHIAMATA = "output/ultima_chiamata.txt"   # globale, non per giorno
+FILE_VOCI_GIORNO = "voci.json"
+
+_data_corrente = None
 
 
+def imposta_data(data_str=None):
+    """Imposta il giorno di lavoro (stringa AAAA-MM-GG). None = oggi."""
+    global _data_corrente
+    if data_str:
+        _date.fromisoformat(data_str)          # valida il formato
+    _data_corrente = data_str or None
+
+
+def data_corrente():
+    return _data_corrente or _date.today().isoformat()
+
+
+def dir_giorno(data=None):
+    p = Path(DIR_OUTPUT) / (data or data_corrente())
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def percorso_articoli_grezzi(data=None):
+    return str(dir_giorno(data) / "articoli_grezzi.json")
+
+
+def percorso_notizie_sezione(nome_sezione, data=None):
+    return str(dir_giorno(data) / f"notizie_{slug_sezione(nome_sezione)}.json")
+
+
+def percorso_parlato(data=None):
+    """Testi 'parlati' (dopo la fonetica) di tutte le sezioni, input della fase 3."""
+    return str(dir_giorno(data) / "parlato.json")
+
+
+def percorso_voce_wav_sezione(nome_sezione, data=None):
+    return str(dir_giorno(data) / f"voce_{slug_sezione(nome_sezione)}.wav")
+
+
+def percorso_voce_meta_sezione(nome_sezione, data=None):
+    return str(dir_giorno(data) / f"voce_{slug_sezione(nome_sezione)}.json")
+
+
+def percorso_episodio_wav(data=None):
+    return str(dir_giorno(data) / "episodio.wav")
+
+
+def percorso_episodio_mp3(data=None):
+    return str(dir_giorno(data) / "episodio.mp3")
+
+
+def percorso_manifest(data=None):
+    return str(dir_giorno(data) / "manifest.json")
+
+
+def percorso_voci_giorno(data=None):
+    return str(dir_giorno(data) / FILE_VOCI_GIORNO)
+
+
+# --- Compatibilità con test_voci.py / tts.py (CLI legacy, un audio per sezione) ---
 def percorso_testo_sezione(nome_sezione):
-    return f"output/testo_{nome_sezione}.txt"
+    return str(dir_giorno() / f"testo_{nome_sezione}.txt")
 
 
 def percorso_audio_wav_sezione(nome_sezione):
-    return f"output/audio_{nome_sezione}.wav"
+    return str(dir_giorno() / f"audio_{nome_sezione}.wav")
 
 
 def percorso_audio_ogg_sezione(nome_sezione):
-    return f"output/audio_{nome_sezione}.ogg"
+    return str(dir_giorno() / f"audio_{nome_sezione}.ogg")
+
+
+# ---------------------------------------------------------------------------
+# SINTESI PER SEZIONE (Fase 1)
+# ---------------------------------------------------------------------------
+MAX_NOTIZIE_PER_SEZIONE = 6
+MAX_FRASI_PER_NOTIZIA = 8
+MAX_CHARS_FRASE = 200            # limite XTTS per l'italiano: 213
+SINTESI_MAX_TOKENS = 16000       # primo tentativo; il retry raddoppia
+SINTESI_PARALLELA = True         # una chiamata per sezione, in parallelo
+SINTESI_PROMPT_CACHING = True
+
+# Saluto, transizioni e commiato li genera il codice (Claude, con una
+# chiamata per sezione, non sa se la sua è la prima o l'ultima del giorno).
+# Segnaposto: {data}, {periodo}. Si sceglie una variante in modo
+# deterministico per data (stesso giorno = stesso testo = cache audio valida).
+TESTI_APERTURA = [
+    "Buongiorno, questa è la rassegna stampa di {data}.",
+    "Buongiorno e benvenuti alla rassegna stampa di {data}.",
+]
+TESTO_PERIODO = "Le notizie di questa edizione coprono il periodo {periodo}."
+ARGOMENTO_DA = {"Italia": "dall'Italia", "Esteri": "dagli esteri",
+                "Economia": "dall'economia", "Tecnologia": "dalla tecnologia"}
+ARGOMENTO_A = {"Italia": "all'Italia", "Esteri": "agli esteri",
+               "Economia": "all'economia", "Tecnologia": "alla tecnologia"}
+TRANSIZIONE_PRIMA = ["Iniziamo {argomento}.", "Cominciamo {argomento}."]
+TRANSIZIONE_ALTRE = ["Passiamo {argomento}.", "Spostiamoci {argomento}."]
+TESTI_CHIUSURA = [
+    "Per oggi è tutto. Buon proseguimento.",
+    "Questo è tutto per oggi. Grazie dell'ascolto e a domani.",
+]
+
+# ---------------------------------------------------------------------------
+# FONETICA (Fase 2)
+# ---------------------------------------------------------------------------
+FILE_FONETICA = "fonetica.txt"                       # dizionario scritto -> parlato
+FILE_FONETICA_CANDIDATI = "logs/fonetica_candidati.txt"
+
+# ---------------------------------------------------------------------------
+# AUDIO ED EPISODIO (Fase 3)
+# ---------------------------------------------------------------------------
+PAUSA_FRASE_MS = 350      # tra frasi della stessa notizia
+PAUSA_NOTIZIA_MS = 900    # tra notizie
+PAUSA_SEZIONE_MS = 1500   # tra sezioni (e dopo apertura/transizioni)
+XTTS_VOCE_SPECIALE = None  # voce per saluto/transizioni/commiato; None = voce della sezione
+MP3_BITRATE = "64k"
+TOLLERANZA_DURATA_S = 0.5  # controllo coerenza durata file vs timeline
+AUDIO_FINTO = False        # True (main.py --audio-finto): toni al posto di XTTS, per sviluppo
+
+# ---------------------------------------------------------------------------
+# SITO, DEPLOY, NOTIFICA (Fase 4) — i segreti stanno in .env, vedi .env.example
+# ---------------------------------------------------------------------------
+import os as _os
+
+DIR_SITO = "output/sito"            # contiene tutti i giorni (retention inclusa)
+DIR_SITO_TEMPLATE = "sito_template"
+RETENTION_GIORNI = 30
+SITO_NOME_PROGETTO_CF = "rassegna-audio"   # nome progetto Cloudflare Pages (o env CF_PAGES_PROJECT)
+FILE_TOKEN_SITO = "data/sito_token.txt"
+TITOLO_SITO = "Rassegna stampa audio"
+# Hook per la Fase 5 (mappa): auto = mappa solo se la notizia ha luoghi.
+MAPPA_MODALITA = {"Italia": "fissa", "Esteri": "zoom",
+                  "Economia": "auto", "Tecnologia": "auto"}
+
+
+def sito_token():
+    """Token casuale nel percorso del sito (/t/<token>/...). Da env SITO_TOKEN,
+    altrimenti generato una volta e salvato in data/sito_token.txt."""
+    t = _os.environ.get("SITO_TOKEN", "").strip()
+    if t:
+        return t
+    p = Path(FILE_TOKEN_SITO)
+    if p.exists() and p.read_text(encoding="utf-8").strip():
+        return p.read_text(encoding="utf-8").strip()
+    import secrets
+    t = secrets.token_urlsafe(16)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(t, encoding="utf-8")
+    return t
+
+
+def sito_base_url():
+    return _os.environ.get("SITO_BASE_URL", "").rstrip("/")
+
+
+def telegram_invia_audio():
+    return _os.environ.get("TELEGRAM_INVIA_AUDIO", "").strip().lower() in {"1", "true", "si", "sì", "yes"}
+
 
 # XTTS-v2 (Coqui) — sintesi vocale neurale con voice cloning.
 # Il modello gira in locale sulla tua GPU (richiede circa 4-6GB di VRAM in

@@ -1,0 +1,56 @@
+{
+  "nome": "Italia",
+  "notizie": [
+    {
+      "titolo": "Approvato il piano per le strade",
+      "fonti": [
+        "a000000001",
+        "a000000002"
+      ],
+      "frasi": [
+        {
+          "testo": "Il consiglio dei ministri ha approvato un piano per le strade, secondo ANSA e Repubblica.",
+          "entita": [
+            {
+              "nome": "Consiglio dei ministri",
+              "tipo": "istituzione",
+              "descrizione": "governo",
+              "menzione": "consiglio dei ministri"
+            }
+          ],
+          "luoghi": []
+        },
+        {
+          "testo": "Il costo previsto è di 1.500.000 euro, riferisce l'ANSA.",
+          "entita": [],
+          "luoghi": []
+        },
+        {
+          "testo": "Repubblica parla di un via libera atteso da mesi.",
+          "entita": [],
+          "luoghi": []
+        }
+      ]
+    },
+    {
+      "titolo": "Accordo sul porto di Taranto",
+      "fonti": [
+        "a000000003"
+      ],
+      "frasi": [
+        {
+          "testo": "Secondo una sola fonte, l'AGI, è stato firmato a Taranto un accordo sul porto.",
+          "entita": [],
+          "luoghi": [
+            {
+              "nome": "Taranto",
+              "tipo": "citta",
+              "paese": "IT",
+              "menzione": "Taranto"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

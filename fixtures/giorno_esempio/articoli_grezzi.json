@@ -1,0 +1,56 @@
+[
+  {
+    "id": "a000000001",
+    "fonte": "ANSA - Politica",
+    "categoria": "Italia",
+    "titolo": "Approvato il piano per le strade",
+    "link": "https://example.org/ansa/strade",
+    "data": "",
+    "estratto": "Il consiglio dei ministri ha approvato un piano da 1.500.000 euro."
+  },
+  {
+    "id": "a000000002",
+    "fonte": "Repubblica",
+    "categoria": "Italia",
+    "titolo": "Strade, via libera al piano",
+    "link": "https://example.org/repubblica/strade",
+    "data": "",
+    "estratto": "Piano per le strade approvato, il costo è di 1,5 milioni."
+  },
+  {
+    "id": "a000000003",
+    "fonte": "AGI",
+    "categoria": "Italia",
+    "titolo": "Taranto, accordo sul porto",
+    "link": "https://example.org/agi/taranto",
+    "data": "",
+    "estratto": "Firmato a Taranto un accordo per il porto."
+  },
+  {
+    "id": "b000000001",
+    "fonte": "BBC News World",
+    "categoria": "Esteri",
+    "titolo": "Summit a Washington",
+    "link": "https://example.org/bbc/summit",
+    "data": "",
+    "estratto": "Vertice a Washington tra i leader."
+  },
+  {
+    "id": "c000000001",
+    "fonte": "ANSA - Economia",
+    "categoria": "Economia",
+    "titolo": "Il PIL cresce del 0,3%",
+    "link": "https://example.org/ansa/pil",
+    "data": "",
+    "estratto": "Pil in crescita."
+  },
+  {
+    "id": "d000000001",
+    "fonte": "Wired Italia",
+    "categoria": "Tecnologia",
+    "titolo": "Nuova rete 5G",
+    "link": "javascript:alert(1)",
+    "data": "",
+    "estratto": "Rete 5G estesa."
+  }
+]

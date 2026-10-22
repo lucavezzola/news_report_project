@@ -1,3 +1,6 @@
+jinja2
+num2words
+pytest
 feedparser>=6.0.14
 anthropic>=0.40.0
 requests>=2.32.0
@@ -5,6 +8,7 @@ python-dotenv>=1.0.0
 numpy>=1.26.0
 soundfile>=0.12.1
 librosa>=0.11.0
+torch
 
 # XTTS-v2: installa PRIMA torch con supporto CUDA per la tua GPU seguendo
 # https://pytorch.org/get-started/locally/ (il comando esatto dipende dalla

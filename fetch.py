@@ -12,6 +12,7 @@ Uso da main.py:
     articoli = raccogli_articoli()
 """
 
+import hashlib
 import json
 import logging
 from datetime import datetime, timedelta, timezone
@@ -59,6 +60,13 @@ def _fonti_di_oggi(ora_fine=None, giorni=1, ora_inizio=None):
     return fonti_attive
 
 
+def id_articolo(link, fonte="", titolo=""):
+    """ID stabile: primi 10 caratteri dello sha1 dell'URL (se manca l'URL,
+    fonte+titolo). Claude cita le fonti solo con questi ID: non scrive mai URL."""
+    base = (link or "").strip() or f"{fonte}|{titolo}"
+    return hashlib.sha1(base.encode("utf-8")).hexdigest()[:10]
+
+
 def _entry_e_recente(entry, ora_limite):
     """Ritorna True se l'entry RSS ha una data di pubblicazione dentro la
     finestra temporale. Se il feed non fornisce una data valida, l'entry
@@ -90,6 +98,7 @@ def raccogli_articoli(giorni=1, ora_fine=None, ora_inizio=None):
     )
 
     tutti_articoli = []
+    ids_visti = set()
     fonti_ok, fonti_ko = [], []
 
     for fonte in fonti_attive:
@@ -111,11 +120,18 @@ def raccogli_articoli(giorni=1, ora_fine=None, ora_inizio=None):
             recenti = recenti[:limite_articoli]
 
             for entry in recenti:
+                titolo = entry.get("title", "").strip()
+                link = entry.get("link", "")
+                id_art = id_articolo(link, nome, titolo)
+                if id_art in ids_visti:      # stesso URL da due feed: tienilo una volta
+                    continue
+                ids_visti.add(id_art)
                 tutti_articoli.append({
+                    "id": id_art,
                     "fonte": nome,
                     "categoria": categoria,
-                    "titolo": entry.get("title", "").strip(),
-                    "link": entry.get("link", ""),
+                    "titolo": titolo,
+                    "link": link,
                     "data": entry.get("published", entry.get("updated", "")),
                     "estratto": entry.get("summary", "").strip(),
                 })
@@ -140,7 +156,7 @@ def raccogli_articoli(giorni=1, ora_fine=None, ora_inizio=None):
 
 
 def salva_json(articoli, percorso=None):
-    percorso = percorso or config.FILE_JSON_GREZZO
+    percorso = percorso or config.percorso_articoli_grezzi()
     with open(percorso, "w", encoding="utf-8") as f:
         json.dump(articoli, f, ensure_ascii=False, indent=2)
     log.info(f"Salvato JSON grezzo in {percorso}")
@@ -152,6 +168,6 @@ if __name__ == "__main__":
 
     print("\n--- Anteprima titoli raccolti ---")
     for a in articoli[:30]:
-        print(f"[{a['categoria']:10}] {a['fonte']:25} — {a['titolo']}")
+        print(f"[{a['categoria']:10}] {a['id']} {a['fonte']:25} — {a['titolo']}")
     if len(articoli) > 30:
-        print(f"... e altri {len(articoli) - 30} articoli (vedi {config.FILE_JSON_GREZZO})")
+        print(f"... e altri {len(articoli) - 30} articoli (vedi {config.percorso_articoli_grezzi()})")

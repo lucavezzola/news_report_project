@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ titolo_sito }} — archivio</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+<header class="testata"><h1>{{ titolo_sito }}</h1><p class="meta">Archivio degli ultimi giorni</p></header>
+<main>
+  <ul class="archivio">
+    {% for g in giorni %}
+    <li><a href="{{ g.data }}/">{{ g.data_it }}</a> <span class="meta">{{ g.durata_min }} min · {{ g.n_notizie }} notizie</span></li>
+    {% else %}
+    <li>Nessun episodio disponibile.</li>
+    {% endfor %}
+  </ul>
+</main>
+</body>
+</html>

@@ -1,0 +1,34 @@
+:root{--bg:#fbfbf9;--fg:#1c1c1a;--mut:#666;--acc:#0b5cad;--card:#f0efe9;--att:#fff3b0;--bord:#d8d6cc;color-scheme:light dark}
+@media (prefers-color-scheme:dark){:root{--bg:#121212;--fg:#ececea;--mut:#a0a0a0;--acc:#7db7f5;--card:#1e1e1c;--att:#4a4310;--bord:#333}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:1.0625rem/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
+  padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+a{color:var(--acc)}
+.testata,main,footer{max-width:46rem;margin:0 auto;padding:.75rem 1rem;overflow-wrap:anywhere}
+.testata{padding-top:calc(.75rem + env(safe-area-inset-top))}
+.testata h1{margin:.2rem 0;font-size:1.5rem;line-height:1.25}
+.sito{margin:0;font-size:.85rem}.sito a{text-decoration:none}
+.meta{color:var(--mut);margin:.2rem 0;font-size:.9rem}
+.player{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--bord);padding:.5rem 1rem}
+.player audio{width:100%;max-width:46rem;display:block;margin:0 auto}
+.opzioni{max-width:46rem;margin:.3rem auto 0;display:flex;gap:1rem;flex-wrap:wrap;font-size:.9rem}
+h2{font-size:1.25rem;border-bottom:2px solid var(--bord);padding-bottom:.2rem;margin-top:2rem}
+h3{font-size:1.1rem;margin:1.2rem 0 .3rem}
+.badge{font-size:.7rem;font-weight:600;background:var(--card);border:1px solid var(--bord);border-radius:.6rem;padding:.05rem .5rem;vertical-align:middle;white-space:nowrap}
+.frase{cursor:pointer;border-radius:.25rem;padding:.05rem 0;transition:background .15s}
+.frase:hover{background:var(--card)}
+.frase.attiva{background:var(--att)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.speciale{color:var(--mut);font-style:italic;margin:1rem 0}
+.fonti{font-size:.9rem;margin:.4rem 0 1rem}
+.fonti summary{cursor:pointer;color:var(--mut)}
+.fonti ul{margin:.3rem 0;padding-left:1.1rem}
+.testata-fonte{color:var(--mut);font-size:.8rem}
+.indice{background:var(--card);border-radius:.5rem;padding:.5rem .9rem;margin:.5rem 0 1rem}
+.indice summary{cursor:pointer;font-weight:600}
+.indice-sez{margin:.6rem 0 0;font-weight:600;font-size:.9rem;color:var(--mut)}
+.indice ul{list-style:none;margin:.2rem 0;padding:0}
+button.vai{background:none;border:0;padding:.25rem 0;color:var(--acc);font:inherit;text-align:left;cursor:pointer;min-height:2.25rem}
+.archivio{list-style:none;padding:0}
+.archivio li{padding:.6rem 0;border-bottom:1px solid var(--bord)}
+footer{color:var(--mut);font-size:.8rem}

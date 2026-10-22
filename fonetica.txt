@@ -1,0 +1,15 @@
+# fonetica.txt — dizionario scritto -> parlato, usato da fonetica.py.
+# Formato: parola scritta = come va pronunciata (grafia che XTTS legge bene).
+# Una voce per riga; "#" inizia un commento. La corrispondenza è a parola
+# intera e insensibile alle maiuscole. Il file viene riletto a ogni esecuzione:
+# non serve toccare il codice. Per provare più grafie: python test_fonetica.py
+#
+# Esempi iniziali (da verificare all'ascolto):
+Washington = Uascington
+WeChat = Uiciat
+ChatGPT = Ciat gi pi ti
+OpenAI = Open ei ai
+Nvidia = Envidia
+iPhone = Aifon
+Wi-Fi = Uai fai
+Xi Jinping = Si Cinpin

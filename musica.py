@@ -7,6 +7,10 @@ Tre pezzi musicali separati (percorsi in config.py):
 - MUSICA_CORPO: in LOOP come sottofondo SOTTO la voce, in ogni sezione
 - MUSICA_OUTRO: suonata DA SOLA dopo l'ultima sezione della rassegna
 
+v2: la pipeline usa applica_musica_episodio() (mix unico a livello di
+episodio, il loop non riparte a ogni sezione); applica_musica() per sezione
+resta per i test manuali.
+
 Il missaggio avviene in memoria su array numpy float32, alla sample rate di
 XTTS-v2 (24000Hz), prima che tts.py scriva il file wav finale — non serve
 nessun editing audio manuale, solo i 3 file musicali grezzi.
@@ -144,6 +148,42 @@ def applica_musica(audio_voce, sample_rate, e_prima_sezione=False, e_ultima_sezi
             log.warning(f"Musica di outro non disponibile, la salto: {e}")
 
     return np.concatenate(pezzi).astype(np.float32)
+
+
+def applica_musica_episodio(audio_voce, sample_rate):
+    """Mix UNA SOLA VOLTA per l'intero episodio:
+    [intro da sola] + [voce con corpo in loop sotto, senza ripartire a ogni
+    sezione] + [outro da sola].
+    Ritorna (audio, offset_secondi): offset = durata dell'intro, di cui vanno
+    spostati tutti i tempi della timeline. Se la musica è disabilitata o un
+    file manca, si prosegue senza quella parte (mai bloccare la pipeline)."""
+    if not getattr(config, "MUSICA_ABILITATA", False):
+        return audio_voce, 0.0
+
+    pezzi, offset_campioni = [], 0
+    try:
+        intro = _carica_traccia(config.MUSICA_INTRO, sample_rate)
+        intro = (_applica_dissolvenza(intro, sample_rate) * config.MUSICA_VOLUME_INTRO_OUTRO).astype(np.float32)
+        pezzi.append(intro)
+        offset_campioni = len(intro)
+    except Exception as e:
+        log.warning(f"Musica di intro non disponibile, la salto: {e}")
+
+    try:
+        corpo = _carica_traccia(config.MUSICA_CORPO, sample_rate)
+        sottofondo = _applica_dissolvenza(_loop_a_lunghezza(corpo, len(audio_voce)), sample_rate)
+        pezzi.append(_mixa(audio_voce, sottofondo, config.MUSICA_VOLUME_SOTTOFONDO))
+    except Exception as e:
+        log.warning(f"Musica di sottofondo non disponibile, procedo con la sola voce: {e}")
+        pezzi.append(audio_voce)
+
+    try:
+        outro = _carica_traccia(config.MUSICA_OUTRO, sample_rate)
+        pezzi.append((_applica_dissolvenza(outro, sample_rate) * config.MUSICA_VOLUME_INTRO_OUTRO).astype(np.float32))
+    except Exception as e:
+        log.warning(f"Musica di outro non disponibile, la salto: {e}")
+
+    return np.concatenate(pezzi).astype(np.float32), offset_campioni / sample_rate
 
 
 if __name__ == "__main__":

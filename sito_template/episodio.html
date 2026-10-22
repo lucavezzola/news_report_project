@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ titolo_pagina }}</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="{{ descrizione }}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{{ titolo_sito }}">
+<meta property="og:title" content="{{ titolo_pagina }}">
+<meta property="og:description" content="{{ descrizione }}">
+{% if url_pagina %}<meta property="og:url" content="{{ url_pagina }}">{% endif %}
+{% if url_og_image %}<meta property="og:image" content="{{ url_og_image }}">
+<meta name="twitter:card" content="summary_large_image">{% else %}<meta name="twitter:card" content="summary">{% endif %}
+<meta name="twitter:title" content="{{ titolo_pagina }}">
+<meta name="twitter:description" content="{{ descrizione }}">
+<link rel="stylesheet" href="../static/style.css">
+</head>
+<body>
+<header class="testata">
+  <p class="sito"><a href="../">{{ titolo_sito }}</a></p>
+  <h1>{{ titolo_pagina }}</h1>
+  <p class="meta">{{ durata_min }} min · <a href="{{ manifest.audio }}" download>solo audio (MP3)</a></p>
+</header>
+
+<div class="player" id="player">
+  <audio id="audio" controls preload="metadata" src="{{ manifest.audio }}"></audio>
+  <div class="opzioni">
+    <label>Velocità
+      <select id="velocita">
+        <option value="0.8">0,8×</option><option value="1" selected>1×</option>
+        <option value="1.25">1,25×</option><option value="1.5">1,5×</option>
+        <option value="1.75">1,75×</option><option value="2">2×</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="autoscroll" checked> Segui il testo</label>
+  </div>
+</div>
+
+<main>
+<details class="indice">
+  <summary>Indice</summary>
+  {% for sez in manifest.sezioni %}
+  <p class="indice-sez">{{ sez.nome }}</p>
+  <ul>
+    {% for n in sez.notizie if n.tipo == 'notizia' %}
+    <li><button type="button" class="vai" data-t="{{ n.inizio }}">{{ n.titolo }}</button></li>
+    {% endfor %}
+  </ul>
+  {% endfor %}
+</details>
+
+{% for sez in manifest.sezioni %}
+<section id="{{ sez.id }}">
+  <h2>{{ sez.nome }}</h2>
+  {% for n in sez.notizie %}
+    {% if n.tipo == 'speciale' %}
+    <p class="speciale">{% for f in n.frasi %}<span class="frase" role="button" tabindex="0" data-inizio="{{ f.inizio }}" data-fine="{{ f.fine }}">{{ f.testo }}</span> {% endfor %}</p>
+    {% else %}
+    <article id="{{ n.id }}">
+      <h3>{{ n.titolo }}{% if n.fonte_singola %} <span class="badge" title="Questa notizia compare in una sola testata">fonte singola</span>{% endif %}</h3>
+      <p class="testo">{% for f in n.frasi %}<span class="frase" role="button" tabindex="0" data-inizio="{{ f.inizio }}" data-fine="{{ f.fine }}">{{ f.testo }}</span> {% endfor %}</p>
+      <details class="fonti" open>
+        <summary>Fonti</summary>
+        <ul>
+          {% for fonte in n.fonti %}
+          <li>{% if fonte.url and (fonte.url.startswith('http://') or fonte.url.startswith('https://')) %}<a href="{{ fonte.url }}" target="_blank" rel="noopener noreferrer">{{ fonte.titolo }}</a>{% else %}{{ fonte.titolo }}{% endif %} <span class="testata-fonte">{{ fonte.testata }}</span></li>
+          {% endfor %}
+        </ul>
+      </details>
+    </article>
+    {% endif %}
+  {% endfor %}
+</section>
+{% endfor %}
+</main>
+<footer><p>Testo generato automaticamente a partire dalle fonti linkate; verifica sempre le notizie alla fonte.</p></footer>
+<script src="../static/app.js" defer></script>
+<script type="application/json" id="meta-episodio">{{ meta_media | tojson }}</script>
+</body>
+</html>

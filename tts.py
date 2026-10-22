@@ -19,9 +19,12 @@ Prerequisiti (vedi README.md sezione "Setup XTTS-v2"):
 Uso da terminale (test manuale sul testo di una sezione già generato):
     python tts.py
 
-Uso da main.py:
-    from tts import genera_audio
-    percorso_ogg = genera_audio(testo, percorso_wav, percorso_ogg)
+Uso da episodio.py (v2, per frase con tempi):
+    from tts import genera_traccia
+    audio, tempi = genera_traccia([{"testo": "...", "pausa_dopo": 0.4, "voce": None}], voce_default="...")
+
+genera_audio() (un testo -> wav/ogg con musica) resta per i test manuali
+(python tts.py, test_voci.py) ma non è più usata dalla pipeline.
 """
 
 import gc
@@ -277,6 +280,84 @@ def _prepara_per_sintesi(blocco):
     while b and b[-1] in _TERMINALI_FRASE:
         b = b[:-1].rstrip()
     return b
+
+
+# ---------------------------------------------------------------------------
+# v2: sintesi PER FRASE con tempi (usata da episodio.py)
+# ---------------------------------------------------------------------------
+def _audio_finto(testo):
+    """Tono sinusoidale di durata proporzionale al testo: serve a sviluppare
+    front-end e timeline senza GPU (config.AUDIO_FINTO / main.py --audio-finto)."""
+    durata = max(0.6, len(testo) / 14.0)
+    t = np.arange(int(SAMPLE_RATE * durata)) / SAMPLE_RATE
+    onda = 0.2 * np.sin(2 * np.pi * 220 * t)
+    n = int(0.03 * SAMPLE_RATE)
+    onda[:n] *= np.linspace(0, 1, n)
+    onda[-n:] *= np.linspace(1, 0, n)
+    return onda.astype(np.float32)
+
+
+def sintetizza_testo(testo, speaker_name=None, speaker_wav=None):
+    """Sintetizza UNA frase (anche se internamente la spezza in blocchi per
+    rispettare il limite di XTTS) e ritorna l'onda float32 a SAMPLE_RATE."""
+    if config.AUDIO_FINTO:
+        return _audio_finto(testo)
+    if not speaker_name and not speaker_wav:
+        speaker_wav = config.XTTS_SPEAKER_WAV
+    modello = _carica_modello()
+    kwargs_voce = {"speaker": speaker_name} if speaker_name else {"speaker_wav": speaker_wav}
+    blocchi = _spezza_in_blocchi(_pulisci_testo(testo))
+    silenzio = np.zeros(int(SAMPLE_RATE * config.XTTS_SILENZIO_TRA_CHUNK_MS / 1000), dtype=np.float32)
+    pezzi = []
+    for i, blocco in enumerate(blocchi, 1):
+        try:
+            onda = modello.tts(text=_prepara_per_sintesi(blocco), language=config.XTTS_LANGUAGE, **kwargs_voce)
+        except RuntimeError as e:
+            if "out of memory" in str(e).lower():
+                log.error("Out-of-memory sulla GPU durante la sintesi (vedi suggerimenti in config.py).")
+            raise
+        pezzi.append(np.asarray(onda, dtype=np.float32))
+        if i < len(blocchi):
+            pezzi.append(silenzio)
+        if _device_usato == "cuda":
+            import torch
+            torch.cuda.empty_cache()
+    return np.concatenate(pezzi) if pezzi else np.zeros(0, dtype=np.float32)
+
+
+def genera_traccia(unita, voce_default=None):
+    """Sintetizza una lista di frasi e ritorna (audio, tempi).
+
+    unita: lista di dict {"testo": str, "pausa_dopo": secondi, "voce": str|None}
+           ("voce" = nome di una voce predefinita XTTS; None = voce_default,
+           e se anche questa è None, voice cloning da config.XTTS_SPEAKER_WAV).
+    audio: np.float32 a SAMPLE_RATE, solo voce (niente musica né conversione).
+    tempi: lista di (inizio, fine) in secondi per ogni unità, relativi
+           all'inizio dell'audio. La pausa dopo l'unità NON è inclusa nel suo 'fine'.
+
+    Velocità (config.XTTS_VELOCITA): time-stretch applicato a ogni frase
+    prima di concatenarla, così la durata di ogni frase (e quindi i tempi)
+    è nota esattamente; le pause non vengono stirate."""
+    if not config.AUDIO_FINTO:
+        _verifica_prerequisiti(richiedi_speaker_wav=not (voce_default or any(u.get("voce") for u in unita)))
+    pezzi, tempi, cursore = [], [], 0
+    for i, u in enumerate(unita, 1):
+        voce = u.get("voce") or voce_default
+        onda = sintetizza_testo(u["testo"], speaker_name=voce)
+        if config.XTTS_VELOCITA != 1.0 and len(onda):
+            import librosa
+            onda = librosa.effects.time_stretch(onda, rate=config.XTTS_VELOCITA)
+        inizio = cursore / SAMPLE_RATE
+        cursore += len(onda)
+        tempi.append((inizio, cursore / SAMPLE_RATE))
+        pezzi.append(onda)
+        pausa = np.zeros(int(SAMPLE_RATE * float(u.get("pausa_dopo", 0))), dtype=np.float32)
+        pezzi.append(pausa)
+        cursore += len(pausa)
+        if i % 20 == 0:
+            log.info(f"  sintetizzate {i}/{len(unita)} frasi")
+    audio = np.concatenate(pezzi) if pezzi else np.zeros(0, dtype=np.float32)
+    return audio, tempi
 
 
 def genera_audio(testo, percorso_wav=None, percorso_ogg=None, speaker_wav=None, speaker_name=None,

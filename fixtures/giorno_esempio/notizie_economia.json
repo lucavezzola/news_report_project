@@ -1,0 +1,18 @@
+{
+  "nome": "Economia",
+  "notizie": [
+    {
+      "titolo": "Pil in crescita",
+      "fonti": [
+        "c000000001"
+      ],
+      "frasi": [
+        {
+          "testo": "Secondo l'ANSA, il Pil cresce dello 0,3% nel trimestre.",
+          "entita": [],
+          "luoghi": []
+        }
+      ]
+    }
+  ]
+}

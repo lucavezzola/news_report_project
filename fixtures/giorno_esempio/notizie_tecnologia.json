@@ -1,0 +1,18 @@
+{
+  "nome": "Tecnologia",
+  "notizie": [
+    {
+      "titolo": "Rete 5G estesa",
+      "fonti": [
+        "d000000001"
+      ],
+      "frasi": [
+        {
+          "testo": "Wired Italia scrive che la rete 5G è stata estesa a nuove aree.",
+          "entita": [],
+          "luoghi": []
+        }
+      ]
+    }
+  ]
+}
