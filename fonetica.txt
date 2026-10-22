@@ -12,3 +12,4 @@ Nvidia = Envidia
 iPhone = Aifon
 Wi-Fi = Uai fai
 Xi Jinping = Si Cinpin
+Piantedosi = Piantedòsi
