@@ -5,8 +5,7 @@
 # non serve toccare il codice. Per provare più grafie: python test_fonetica.py
 #
 # Esempi iniziali (da verificare all'ascolto):
-Washington = Uascington
-WeChat = Uiciat
+WeChat = Ui chat
 ChatGPT = Ciat gi pi ti
 OpenAI = Open ei ai
 Nvidia = Envidia
