@@ -5,3 +5,7 @@ piper/
 __pycache__/
 xtts_reference/
 venv/
+fixtures/
+data/
+.pytest_cache/
+musica/
