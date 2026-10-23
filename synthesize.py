@@ -262,6 +262,8 @@ def _pulisci_metadati(elementi, tipi_validi, tipo_default, testo_frase, metriche
         elif nome in testo_frase:          # recupero: il nome compare tal quale
             menzione = nome
         else:
+            log.info(f"Metadato scartato: {chiave_metrica[:-1]} {nome!r}, menzione {menzione!r} "
+                     f"non presente nella frase: {testo_frase[:100]!r}")
             continue                        # menzione non verificabile: scartata
         tipo = e.get("tipo") if e.get("tipo") in tipi_validi else tipo_default
         voce = {"nome": nome, "tipo": tipo, "menzione": menzione}

@@ -4,6 +4,14 @@ from pathlib import Path
 RADICE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RADICE))
 
+import tempfile
+
+import logging_config
+# I test simulano errori (risposte troncate, JSON invalido...): i loro log
+# NON devono finire in logs/ del progetto vero. Va fatto prima di importare
+# i moduli che creano i logger.
+logging_config.LOG_DIR = Path(tempfile.mkdtemp(prefix="log_test_"))
+
 import pytest
 import config
 

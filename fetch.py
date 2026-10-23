@@ -26,6 +26,31 @@ from logging_config import configura_logger
 log = configura_logger("fetch", "fetch.log")
 
 
+USER_AGENT = "Mozilla/5.0 (compatible; RassegnaAudio/1.0; lettore RSS personale)"
+
+
+def _scarica_feed(url):
+    """Scarica il feed con requests (User-Agent esplicito, timeout) e lo passa
+    a feedparser. Molti siti rifiutano o ridirigono lo user agent predefinito di
+    feedparser restituendo una pagina HTML: in quel caso l'errore riporta
+    status, Content-Type e l'inizio della risposta, per capire al volo cosa è successo."""
+    import requests
+    r = requests.get(url, timeout=20, headers={
+        "User-Agent": USER_AGENT,
+        "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
+    })
+    if r.status_code >= 400:
+        raise ValueError(f"HTTP {r.status_code}")
+    feed = feedparser.parse(r.content)
+    if not feed.entries:
+        inizio = r.text[:120].replace("\n", " ").strip()
+        raise ValueError(
+            f"nessun articolo nel feed (bozo_exception: {feed.bozo_exception if feed.bozo else 'nessuna'}; "
+            f"Content-Type: {r.headers.get('Content-Type', '?')}; inizio risposta: {inizio!r})"
+        )
+    return feed
+
+
 def _fonti_di_oggi(ora_fine=None, giorni=1, ora_inizio=None):
     """Restituisce le fonti attive nei giorni di calendario coperti."""
     ora_fine = ora_fine or datetime.now().astimezone()
@@ -104,7 +129,7 @@ def raccogli_articoli(giorni=1, ora_fine=None, ora_inizio=None):
     for fonte in fonti_attive:
         nome, categoria, url = fonte["nome"], fonte["categoria"], fonte["url"]
         try:
-            feed = feedparser.parse(url)
+            feed = _scarica_feed(url)
 
             # feedparser non lancia eccezioni sugli errori HTTP: bisogna
             # controllare bozo/status esplicitamente.
