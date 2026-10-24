@@ -9,7 +9,20 @@
       "frasi": [
         {
           "testo": "Wired Italia scrive che la rete 5G è stata estesa a nuove aree.",
-          "entita": [],
+          "entita": [
+            {
+              "nome": "Carla Gialli",
+              "tipo": "persona",
+              "descrizione": "scrittrice",
+              "menzione": "Carla Gialli"
+            },
+            {
+              "nome": "Paolo Neri",
+              "tipo": "persona",
+              "descrizione": "esperto",
+              "menzione": "Paolo Neri"
+            }
+          ],
           "luoghi": []
         }
       ]

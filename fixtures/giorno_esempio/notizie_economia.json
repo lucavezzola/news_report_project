@@ -13,6 +13,33 @@
           "luoghi": []
         }
       ]
+    },
+    {
+      "titolo": "Decisione della banca centrale",
+      "fonti": [
+        "c000000001"
+      ],
+      "frasi": [
+        {
+          "testo": "La Banca Centrale Esempio ha deciso i tassi a Francoforte.",
+          "entita": [
+            {
+              "nome": "Banca Centrale Esempio",
+              "tipo": "istituzione",
+              "descrizione": "banca centrale",
+              "menzione": "Banca Centrale Esempio"
+            }
+          ],
+          "luoghi": [
+            {
+              "nome": "Francoforte",
+              "tipo": "citta",
+              "paese": "DE",
+              "menzione": "Francoforte"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

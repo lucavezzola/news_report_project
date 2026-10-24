@@ -383,3 +383,76 @@ MUSICA_VOLUME_INTRO_OUTRO = 0.7
 MUSICA_DISSOLVENZA_MS = 500
 
 # Telegram — valori letti da variabili d'ambiente, vedi .env.example
+
+
+# ---------------------------------------------------------------------------
+# MAPPA, ENTITÀ E IMMAGINI (Fasi 5-6)
+# ---------------------------------------------------------------------------
+DIR_GEO = "data/geo"                       # prodotto da scarica_geo.py
+DIR_CACHE = "data/cache"
+FILE_CACHE_LUOGHI = "data/cache/luoghi.json"
+FILE_CACHE_ENTITA = "data/cache/entita.json"
+DIR_CACHE_IMMAGINI = "data/cache/img"
+FILE_OVERRIDE_LUOGHI = "data/luoghi_override.json"
+FILE_OVERRIDE_ENTITA = "data/entita_override.json"
+
+
+def percorso_arricchimento(data=None):
+    return str(dir_giorno(data) / "arricchimento.json")
+
+
+# Wikimedia e Nominatim chiedono uno user agent identificabile con un contatto.
+# Senza CONTATTO_EMAIL nel .env le chiamate a queste API vengono SALTATE
+# (restano cache e override): l'episodio esce comunque, senza immagini/mappa
+# per i luoghi non già noti.
+def contatto_api():
+    return _os.environ.get("CONTATTO_EMAIL", "").strip()
+
+
+def user_agent_api():
+    return f"RassegnaAudioPersonale/1.0 (uso personale non commerciale; contatto: {contatto_api()})"
+
+
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+WIKIDATA_API = "https://www.wikidata.org/w/api.php"
+COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+PAUSA_API_S = 1.1                  # Nominatim: massimo 1 richiesta al secondo
+CACHE_NEGATIVA_GIORNI = 7          # un luogo/entità non risolti non si riprovano per 7 giorni
+CACHE_MAX_INUTILIZZO_GIORNI = 90   # voci di cache non usate da 90 giorni: potate
+
+# Mappa: keyframe
+MAPPA_FUSIONE_S = 2.0              # keyframe più vicini di così vengono fusi
+MAPPA_SPAN_MAX_GRADI = 25          # oltre, più luoghi nella stessa frase = movimenti sequenziali
+MAPPA_ZOOM_CITTA = 9
+MAPPA_ZOOM_LUOGO = 8
+
+# Entità: una persona (o organizzazione) compare solo se Wikidata la conferma
+# e ha almeno questo numero di sitelinks (soglia di notorietà, da calibrare).
+SOGLIA_NOTORIETA_SITELINKS = 10
+SOGLIA_PUNTEGGIO_ENTITA = 5        # punteggio minimo del candidato migliore
+MARGINE_PUNTEGGIO_ENTITA = 2       # distacco minimo dal secondo candidato
+ENTITA_MAX_CONTEMPORANEE = 3
+ENTITA_DURATA_DOPO_S = 4           # una carta resta ancora 4 s dopo la fine della frase
+IMMAGINE_LARGHEZZA_PX = 400
+
+# Classi Wikidata (valori di P31) coerenti con il tipo dichiarato da Claude.
+# Solo per "persona" la coerenza è obbligatoria (Q5 = essere umano); per gli
+# altri tipi dà un punto di bonus. Elenco da verificare ed estendere con l'uso.
+WIKIDATA_CLASSI = {
+    "persona": {"Q5"},
+    "partito": {"Q7278"},
+    "azienda": {"Q4830453", "Q783794", "Q6881511", "Q891723"},
+    "istituzione": {"Q327333", "Q43229"},
+    "paese": {"Q6256", "Q3624078"},
+    "organizzazione": {"Q43229", "Q484652", "Q245065"},
+    "altro": set(),
+}
+# Proprietà Wikidata con l'immagine, in ordine di preferenza, per tipo.
+WIKIDATA_PROPRIETA_IMMAGINE = {
+    "persona": ["P18"], "partito": ["P154"], "azienda": ["P154"], "istituzione": ["P154"],
+    "organizzazione": ["P154"], "paese": ["P41", "P94"], "altro": ["P18"],
+}
+
+# PWA e pulizia (Fase 7)
+OUTPUT_RETENTION_GIORNI = 30
+PWA_PAGINE_IN_CACHE = 8

@@ -1,6 +1,7 @@
 jinja2
 num2words
 pytest
+pillow
 feedparser>=6.0.14
 anthropic>=0.40.0
 requests>=2.32.0

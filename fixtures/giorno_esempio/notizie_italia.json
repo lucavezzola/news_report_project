@@ -21,14 +21,64 @@
           "luoghi": []
         },
         {
+          "testo": "Gli interventi riguardano la Puglia e la Lombardia, con cantieri a Taranto e a Milano.",
+          "entita": [],
+          "luoghi": [
+            {
+              "nome": "Puglia",
+              "tipo": "regione",
+              "paese": "IT",
+              "menzione": "Puglia"
+            },
+            {
+              "nome": "Lombardia",
+              "tipo": "regione",
+              "paese": "IT",
+              "menzione": "Lombardia"
+            },
+            {
+              "nome": "Taranto",
+              "tipo": "citta",
+              "paese": "IT",
+              "menzione": "Taranto"
+            },
+            {
+              "nome": "Milano",
+              "tipo": "citta",
+              "paese": "IT",
+              "menzione": "Milano"
+            }
+          ]
+        },
+        {
           "testo": "Il costo previsto è di 1.500.000 euro, riferisce l'ANSA.",
           "entita": [],
           "luoghi": []
         },
         {
-          "testo": "Repubblica parla di un via libera atteso da mesi.",
-          "entita": [],
-          "luoghi": []
+          "testo": "La ministra Anna Verdi ha detto che i lavori partiranno a Palermo e nella provincia di Bologna.",
+          "entita": [
+            {
+              "nome": "Anna Verdi",
+              "tipo": "persona",
+              "descrizione": "ministra",
+              "menzione": "Anna Verdi"
+            }
+          ],
+          "luoghi": [
+            {
+              "nome": "Palermo",
+              "tipo": "citta",
+              "paese": "IT",
+              "menzione": "Palermo"
+            },
+            {
+              "nome": "Bologna",
+              "tipo": "provincia",
+              "paese": "IT",
+              "menzione": "provincia di Bologna"
+            }
+          ]
         }
       ]
     },
@@ -47,6 +97,64 @@
               "tipo": "citta",
               "paese": "IT",
               "menzione": "Taranto"
+            }
+          ]
+        },
+        {
+          "testo": "Il Partito Esempio ha commentato l'intesa da Roma.",
+          "entita": [
+            {
+              "nome": "Partito Esempio",
+              "tipo": "partito",
+              "descrizione": "partito",
+              "menzione": "Partito Esempio"
+            }
+          ],
+          "luoghi": [
+            {
+              "nome": "Roma",
+              "tipo": "citta",
+              "paese": "IT",
+              "menzione": "Roma"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "titolo": "Nuovo piano per il Sud",
+      "fonti": [
+        "a000000001"
+      ],
+      "frasi": [
+        {
+          "testo": "A Napoli si discute di un piano che coinvolge la Campania e la Sicilia.",
+          "entita": [
+            {
+              "nome": "Luca Bianchi",
+              "tipo": "persona",
+              "descrizione": "assessore",
+              "menzione": "Luca Bianchi"
+            }
+          ],
+          "luoghi": [
+            {
+              "nome": "Napoli",
+              "tipo": "citta",
+              "paese": "IT",
+              "menzione": "Napoli"
+            },
+            {
+              "nome": "Campania",
+              "tipo": "regione",
+              "paese": "IT",
+              "menzione": "Campania"
+            },
+            {
+              "nome": "Sicilia",
+              "tipo": "regione",
+              "paese": "IT",
+              "menzione": "Sicilia"
             }
           ]
         }

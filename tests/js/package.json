@@ -1,0 +1,1 @@
+{"name": "rassegna-test-js", "private": true, "description": "Solo per il test di fumo del front-end: npm install --prefix tests/js", "dependencies": {"jsdom": "^30.1.3"}}

@@ -27,6 +27,7 @@ import soundfile as sf
 
 import config
 import fonetica
+import mappa
 import musica
 import synthesize
 from logging_config import configura_logger
@@ -213,20 +214,20 @@ def sposta_tempi(tempi_globali, offset):
 # ---------------------------------------------------------------------------
 # Manifest (modello dati 3.2 del piano)
 # ---------------------------------------------------------------------------
-def costruisci_manifest(data, parlato, sezioni, tempi, durata, articoli_per_id, audio="episodio.mp3"):
+def costruisci_manifest(data, parlato, sezioni, tempi, durata, articoli_per_id, audio="episodio.mp3", arricchimento=None):
     """Funzione pura. parlato: lista di sezioni con 'unita'; sezioni: notizie
     originali (stesso ordine); tempi[s][u] = (inizio, fine) con offset intro
-    già applicato. 'entita', 'luoghi' e 'mappa' non ci sono ancora (Fasi 5-6):
-    il front-end li ignora se mancano."""
-    manifest_sezioni = []
+    già applicato. 'arricchimento' (opzionale, vedi arricchimento.py) aggiunge
+    entità, luoghi e keyframe della mappa; senza, il manifest è quello base."""
+    arr = arricchimento or {}
+    frasi_arr = arr.get("frasi", {})
+    manifest_sezioni, sezioni_mappa = [], []
+    entita_usate, luoghi_usati = set(), set()
+
     for si, (sez_p, sez_n) in enumerate(zip(parlato, sezioni)):
         slug = sez_p["slug"]
-        elementi, correnti = [], {}
+        elementi, correnti, eventi = [], {}, {}
         n_speciali = 0
-
-        def chiudi(el):
-            el["inizio"] = el["frasi"][0]["inizio"]
-            el["fine"] = el["frasi"][-1]["fine"]
 
         for ui, u in enumerate(sez_p["unita"]):
             inizio, fine = tempi[si][ui]
@@ -234,7 +235,6 @@ def costruisci_manifest(data, parlato, sezioni, tempi, durata, articoli_per_id, 
             if u["tipo"] == "speciale":
                 n_speciali += 1
                 el = {"id": f"{slug}-s{n_speciali}", "tipo": "speciale", "sottotipo": u["sottotipo"], "frasi": [fr]}
-                chiudi(el)
                 elementi.append(el)
                 continue
             ni = u["notizia"]
@@ -250,13 +250,44 @@ def costruisci_manifest(data, parlato, sezioni, tempi, durata, articoli_per_id, 
                 correnti[ni] = {"id": f"{slug}-{ni + 1}", "tipo": "notizia", "titolo": n["titolo"],
                                 "fonte_singola": len(testate) < 2, "fonti": fonti, "frasi": []}
                 elementi.append(correnti[ni])
+                eventi[ni] = []
+            ref = frasi_arr.get(f"{slug}-{ni}-{u['frase']}")
+            if ref:
+                if ref["entita"]:
+                    fr["entita"] = list(ref["entita"])
+                    entita_usate.update(ref["entita"])
+                if ref["luoghi"]:
+                    fr["luoghi"] = [lid for lid, _ in ref["luoghi"]]
+                    luoghi_usati.update(fr["luoghi"])
+                    for lid, menzione in ref["luoghi"]:
+                        eventi[ni].append((mappa.tempo_menzione(u["testo"], menzione, inizio, fine), lid))
             correnti[ni]["frasi"].append(fr)
+
         for el in elementi:
-            if "inizio" not in el:
-                chiudi(el)
+            el["inizio"], el["fine"] = el["frasi"][0]["inizio"], el["frasi"][-1]["fine"]
         manifest_sezioni.append({"id": slug, "nome": sez_p["nome"], "inizio": elementi[0]["inizio"],
                                  "fine": elementi[-1]["fine"], "notizie": elementi})
-    return {"data": data, "durata": round(durata, 2), "audio": audio, "sezioni": manifest_sezioni}
+        sezioni_mappa.append({
+            "id": slug, "modalita": config.MAPPA_MODALITA.get(sez_p["nome"], "auto"),
+            "inizio": elementi[0]["inizio"], "fine": elementi[-1]["fine"],
+            "notizie": [{"id": el["id"], "tipo": el["tipo"], "inizio": el["inizio"], "fine": el["fine"],
+                         "eventi": eventi.get(int(el["id"].rsplit("-", 1)[1]) - 1, []) if el["tipo"] == "notizia" else []}
+                        for el in elementi]})
+
+    manifest = {"data": data, "durata": round(durata, 2), "audio": audio, "sezioni": manifest_sezioni}
+
+    luoghi_tab = {lid: l for lid, l in arr.get("luoghi", {}).items() if lid in luoghi_usati}
+    keyframe, ha_mappa = mappa.calcola_keyframe(sezioni_mappa, luoghi_tab) if luoghi_tab else ([], {})
+    if keyframe:
+        manifest["luoghi"] = {lid: {k: v for k, v in l.items() if k != "fonte"} for lid, l in luoghi_tab.items()}
+        manifest["mappa"] = keyframe
+        for sez_m, sez_s in zip(manifest_sezioni, sezioni_mappa):
+            sez_m["mappa"] = sez_s["modalita"]
+            for el in sez_m["notizie"]:
+                el["ha_mappa"] = ha_mappa.get(el["id"], sez_s["modalita"] != "auto")
+    if entita_usate:
+        manifest["entita"] = {eid: arr["entita"][eid] for eid in sorted(entita_usate, key=lambda x: int(x[1:]))}
+    return manifest
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +340,12 @@ def costruisci_episodio(data=None, rigenera=False):
     else:
         log.info(f"Coerenza durata ok (timeline {durata:.2f}s, file {d_file if d_file is None else round(d_file, 2)}s)")
 
-    manifest = costruisci_manifest(data or config.data_corrente(), parlato, sezioni, tempi, durata, articoli_per_id)
+    import arricchimento as modulo_arr
+    arr = modulo_arr.carica_valido([{"nome": s["nome"], "notizie": s["notizie"]} for s in sezioni], data)
+    if arr is None:
+        log.info("Nessun arricchimento valido: il manifest esce senza mappa né immagini.")
+    manifest = costruisci_manifest(data or config.data_corrente(), parlato, sezioni, tempi, durata, articoli_per_id,
+                                   arricchimento=arr)
     Path(config.percorso_manifest(data)).write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     log.info(f"Episodio pronto: {mp3} ({durata / 60:.1f} min), manifest: {config.percorso_manifest(data)}")
     return manifest

@@ -43,6 +43,25 @@ def applica_retention(giorni=None, oggi=None):
     if rimossi:
         log.info(f"Retention ({giorni} giorni): rimossi {', '.join(sorted(rimossi))}")
         sito.aggiorna_archivio()
+        sito.pulisci_immagini_orfane()
+    return sorted(rimossi)
+
+
+def pulisci_output(giorni=None, oggi=None):
+    """Elimina da output/ le cartelle dei giorni più vecchi di 'giorni'
+    (config.OUTPUT_RETENTION_GIORNI). Non tocca output/sito né i file globali."""
+    giorni = giorni if giorni is not None else config.OUTPUT_RETENTION_GIORNI
+    if giorni <= 0:
+        return []
+    limite = (oggi or date.today()) - timedelta(days=giorni)
+    rimossi = []
+    base = Path(config.DIR_OUTPUT)
+    for d in base.iterdir() if base.exists() else []:
+        if d.is_dir() and sito._RE_DATA.match(d.name) and date.fromisoformat(d.name) < limite:
+            shutil.rmtree(d)
+            rimossi.append(d.name)
+    if rimossi:
+        log.info(f"Pulizia output ({giorni} giorni): rimossi {', '.join(sorted(rimossi))}")
     return sorted(rimossi)
 
 
@@ -57,6 +76,7 @@ def pubblica(data=None):
     Ritorna l'URL pubblico dell'episodio (se SITO_BASE_URL è impostato)."""
     data = data or config.data_corrente()
     applica_retention()
+    pulisci_output()
     _controlla_dimensioni()
 
     for var in ("CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"):

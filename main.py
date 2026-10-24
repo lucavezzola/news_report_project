@@ -3,7 +3,7 @@ main.py — Orchestratore della pipeline.
 
 Fasi (ognuna salva i suoi file in output/AAAA-MM-GG/ e si può rilanciare da sola):
   1  fetch + sintesi per sezione (Claude)       -> articoli_grezzi.json, notizie_<sezione>.json
-  2  fonetica (scritto -> parlato)              -> parlato.json
+  2  entità/luoghi/immagini (Wikidata, geo) + fonetica -> arricchimento.json, parlato.json
   3  TTS per frase + episodio (musica, MP3)     -> episodio.mp3, manifest.json
   4  sito + deploy + notifica Telegram
 
@@ -14,6 +14,7 @@ Esempi:
     python main.py --da-fase 3           # riusa notizie e parlato già su disco
     python main.py --da-fase 1 --solo-sezione Esteri   # rifà solo Esteri (articoli già raccolti)
     python main.py --no-deploy --no-telegram
+    python main.py --no-arricchimento    # niente mappa/immagini (es. senza rete)
     python main.py --usa-fixture --data 2099-01-01 --audio-finto --no-deploy --no-telegram
 """
 
@@ -76,8 +77,18 @@ def fase1(giorni, ora_inizio, solo_sezione, riepilogo):
         raise RuntimeError("Nessuna sezione generata.")
 
 
-def fase2(riepilogo):
+def fase2(riepilogo, arricchisci=True):
     import episodio
+    if arricchisci:
+        log.info("Fase 2/4: entità, luoghi e immagini...")
+        try:
+            import arricchimento
+            riepilogo["arricchimento"] = arricchimento.arricchisci_giorno()["stats"]
+        except Exception:
+            # mai bloccare l'episodio per mappa e immagini: si prosegue senza
+            log.error("Arricchimento fallito, l'episodio uscirà senza mappa e immagini:\n" + traceback.format_exc())
+            riepilogo["arricchimento_fallito"] = True
+            Path(config.percorso_arricchimento()).unlink(missing_ok=True)
     log.info("Fase 2/4: fonetica...")
     parlato = episodio.prepara_parlato_giorno()
     riepilogo["frasi"] = sum(len(s["unita"]) for s in parlato["sezioni"])
@@ -124,23 +135,41 @@ def esegui_pipeline(args, giorni, ora_inizio):
         sorgente = Path("fixtures/giorno_esempio")
         for f in sorgente.glob("*.json"):
             shutil.copy2(f, config.dir_giorno() / f.name)
+        if (sorgente / "img").exists():                      # immagini di esempio -> cache immagini
+            Path(config.DIR_CACHE_IMMAGINI).mkdir(parents=True, exist_ok=True)
+            for f in (sorgente / "img").iterdir():
+                shutil.copy2(f, Path(config.DIR_CACHE_IMMAGINI) / f.name)
         log.info(f"Fixture copiate in {config.dir_giorno()}")
 
     if args.da_fase <= 1 and not args.usa_fixture:
         fase1(giorni, ora_inizio, args.solo_sezione, riepilogo)
     if args.da_fase <= 2:
-        fase2(riepilogo)
+        fase2(riepilogo, arricchisci=not (args.no_arricchimento or args.usa_fixture))
     if args.da_fase <= 3:
         fase3(args.rigenera, riepilogo)
     fase4(args.no_deploy, args.no_telegram, riepilogo)
 
     log.info("-" * 70)
+    arr = riepilogo.get("arricchimento")
     log.info(f"Riepilogo run: durata {time.time() - t0:.0f}s; token in/out {riepilogo.get('token', 'n/d')}; "
              f"frasi {riepilogo.get('frasi', 'n/d')}; episodio {riepilogo.get('durata_s', 'n/d')}s; "
+             f"entità {arr['entita_risolte'] if arr else 'n/d'}/{arr['entita_totali'] if arr else 'n/d'}, "
+             f"luoghi {arr['luoghi_geocodificati'] if arr else 'n/d'}/{arr['luoghi_totali'] if arr else 'n/d'}; "
              f"sezioni fallite: {riepilogo.get('sezioni_fallite') or 'nessuna'}")
+    avvisi = []
     if riepilogo.get("sezioni_fallite"):
-        log.error(f"Completato con sezioni mancanti: {', '.join(riepilogo['sezioni_fallite'])}")
-        return 1
+        avvisi.append(f"sezioni mancanti: {', '.join(riepilogo['sezioni_fallite'])}")
+    if riepilogo.get("arricchimento_fallito"):
+        avvisi.append("arricchimento fallito (episodio senza mappa e immagini)")
+    if avvisi:
+        log.error("Completato con problemi: " + "; ".join(avvisi))
+        if not args.no_telegram:
+            try:
+                import send_telegram
+                send_telegram.notifica_errore("episodio pubblicato con problemi: " + "; ".join(avvisi))
+            except Exception:
+                pass
+        return 1 if riepilogo.get("sezioni_fallite") else 0
     log.info("Pipeline completata con successo.")
     return 0
 
@@ -179,6 +208,7 @@ def main(argv=None):
     parser.add_argument("--rigenera", action="store_true", help="Fase 3: ignora la cache audio per sezione")
     parser.add_argument("--no-deploy", action="store_true", help="genera il sito ma non lo pubblica")
     parser.add_argument("--no-telegram", action="store_true", help="non invia notifiche Telegram")
+    parser.add_argument("--no-arricchimento", action="store_true", help="salta entità, luoghi e immagini (niente mappa)")
     parser.add_argument("--audio-finto", action="store_true", help="toni al posto di XTTS (sviluppo senza GPU)")
     parser.add_argument("--usa-fixture", action="store_true",
                         help="copia fixtures/giorno_esempio nella cartella del giorno e parte dalla fase 2")

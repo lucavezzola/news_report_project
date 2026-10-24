@@ -6,6 +6,7 @@
 <title>{{ titolo_pagina }}</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="description" content="{{ descrizione }}">
+<meta name="theme-color" content="#0b5cad">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="{{ titolo_sito }}">
 <meta property="og:title" content="{{ titolo_pagina }}">
@@ -15,13 +16,23 @@
 <meta name="twitter:card" content="summary_large_image">{% else %}<meta name="twitter:card" content="summary">{% endif %}
 <meta name="twitter:title" content="{{ titolo_pagina }}">
 <meta name="twitter:description" content="{{ descrizione }}">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="apple-touch-icon" href="../static/icon-192.png">
+<script>try{var t=localStorage.getItem("rassegna:tema");if(t==="chiaro"||t==="scuro")document.documentElement.setAttribute("data-tema",t);var z=parseFloat(localStorage.getItem("rassegna:zoom"));if(z>=0.8&&z<=1.6)document.documentElement.style.setProperty("--zoom",z)}catch(e){}</script>
 <link rel="stylesheet" href="../static/style.css">
+{% if ha_mappa %}<link rel="stylesheet" href="../static/leaflet/leaflet.css">{% endif %}
 </head>
 <body>
+<a class="salta" href="#contenuto">Vai al testo</a>
 <header class="testata">
   <p class="sito"><a href="../">{{ titolo_sito }}</a></p>
   <h1>{{ titolo_pagina }}</h1>
   <p class="meta">{{ durata_min }} min · <a href="{{ manifest.audio }}" download>solo audio (MP3)</a></p>
+  <p class="controlli">
+    <button type="button" id="testo-meno" aria-label="Riduci il testo">A−</button>
+    <button type="button" id="testo-piu" aria-label="Ingrandisci il testo">A+</button>
+    <button type="button" id="tema" aria-label="Cambia tema">Tema: auto</button>
+  </p>
 </header>
 
 <div class="player" id="player">
@@ -35,10 +46,17 @@
       </select>
     </label>
     <label><input type="checkbox" id="autoscroll" checked> Segui il testo</label>
+    {% if ha_visivo %}<label><input type="checkbox" id="mostra-visivo" checked> Mappa e immagini</label>{% endif %}
   </div>
+  {% if ha_visivo %}
+  <div id="visivo" class="visivo" hidden>
+    <div id="mappa" class="mappa" hidden role="img" aria-label="Mappa dei luoghi citati"></div>
+    <div id="citati" class="citati"></div>
+  </div>
+  {% endif %}
 </div>
 
-<main>
+<main id="contenuto">
 <details class="indice">
   <summary>Indice</summary>
   {% for sez in manifest.sezioni %}
@@ -51,17 +69,21 @@
   {% endfor %}
 </details>
 
+{% macro frase(f, n) -%}
+<span class="frase" role="button" tabindex="0" data-inizio="{{ f.inizio }}" data-fine="{{ f.fine }}"{% if f.entita %} data-entita="{{ f.entita|join(' ') }}"{% endif %}{% if n.ha_mappa is defined %} data-mappa="{{ '1' if n.ha_mappa else '0' }}"{% endif %}>{{ f.testo }}</span>
+{%- endmacro %}
+
 {% for sez in manifest.sezioni %}
 <section id="{{ sez.id }}">
   <h2>{{ sez.nome }}</h2>
   {% for n in sez.notizie %}
     {% if n.tipo == 'speciale' %}
-    <p class="speciale">{% for f in n.frasi %}<span class="frase" role="button" tabindex="0" data-inizio="{{ f.inizio }}" data-fine="{{ f.fine }}">{{ f.testo }}</span> {% endfor %}</p>
+    <p class="speciale">{% for f in n.frasi %}{{ frase(f, n) }} {% endfor %}</p>
     {% else %}
     <article id="{{ n.id }}">
       <h3>{{ n.titolo }}{% if n.fonte_singola %} <span class="badge" title="Questa notizia compare in una sola testata">fonte singola</span>{% endif %}</h3>
-      <p class="testo">{% for f in n.frasi %}<span class="frase" role="button" tabindex="0" data-inizio="{{ f.inizio }}" data-fine="{{ f.fine }}">{{ f.testo }}</span> {% endfor %}</p>
-      <details class="fonti" closed>
+      <p class="testo">{% for f in n.frasi %}{{ frase(f, n) }} {% endfor %}</p>
+      <details class="fonti" open>
         <summary>Fonti</summary>
         <ul>
           {% for fonte in n.fonti %}
@@ -74,9 +96,28 @@
   {% endfor %}
 </section>
 {% endfor %}
+
+{% if crediti %}
+<details class="crediti">
+  <summary>Crediti delle immagini</summary>
+  <ul>
+    {% for c in crediti %}
+    <li>{{ c.nome }}: {% if c.autore %}{{ c.autore }}, {% endif %}{% if c.licenza_url %}<a href="{{ c.licenza_url }}" target="_blank" rel="noopener noreferrer">{{ c.licenza }}</a>{% else %}{{ c.licenza }}{% endif %}, <a href="{{ c.pagina }}" target="_blank" rel="noopener noreferrer">Wikimedia Commons</a></li>
+    {% endfor %}
+  </ul>
+</details>
+{% endif %}
 </main>
-<footer><p>Testo generato automaticamente a partire dalle fonti linkate; verifica sempre le notizie alla fonte.</p></footer>
-<script src="../static/app.js" defer></script>
+<footer>
+  <p>Testo generato automaticamente a partire dalle fonti linkate; verifica sempre le notizie alla fonte.</p>
+  {% if ha_mappa %}<p>Confini: Natural Earth (pubblico dominio); regioni e province italiane: ISTAT, elaborazione Openpolis (CC BY). Mappa con Leaflet. I confini rappresentati non implicano una presa di posizione.</p>{% endif %}
+</footer>
 <script type="application/json" id="meta-episodio">{{ meta_media | tojson }}</script>
+{% if ha_visivo %}<script type="application/json" id="dati-visivi">{{ dati_visivi | tojson }}</script>{% endif %}
+<script src="../static/app.js" defer></script>
+{% if ha_mappa %}<script src="../static/leaflet/leaflet.js" defer></script>
+<script src="../static/mappa_logica.js" defer></script>
+<script src="../static/mappa.js" defer></script>{% endif %}
+{% if ha_visivo %}<script src="../static/citati.js" defer></script>{% endif %}
 </body>
 </html>

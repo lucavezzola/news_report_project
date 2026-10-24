@@ -8,7 +8,7 @@
       ],
       "frasi": [
         {
-          "testo": "La BBC riferisce di un vertice a Washington tra i leader.",
+          "testo": "La BBC riferisce di un vertice a Washington tra i leader di Francia e Giappone.",
           "entita": [],
           "luoghi": [
             {
@@ -16,6 +16,89 @@
               "tipo": "citta",
               "paese": "US",
               "menzione": "Washington"
+            },
+            {
+              "nome": "Francia",
+              "tipo": "paese",
+              "paese": "FR",
+              "menzione": "Francia"
+            },
+            {
+              "nome": "Giappone",
+              "tipo": "paese",
+              "paese": "JP",
+              "menzione": "Giappone"
+            }
+          ]
+        },
+        {
+          "testo": "Il confronto si sposta poi a Parigi e a Tokyo.",
+          "entita": [],
+          "luoghi": [
+            {
+              "nome": "Parigi",
+              "tipo": "citta",
+              "paese": "FR",
+              "menzione": "Parigi"
+            },
+            {
+              "nome": "Tokyo",
+              "tipo": "citta",
+              "paese": "JP",
+              "menzione": "Tokyo"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "titolo": "Tavolo sull'energia al Cairo",
+      "fonti": [
+        "b000000001"
+      ],
+      "frasi": [
+        {
+          "testo": "Al Cairo si apre un tavolo sull'energia, con la partecipazione dell'Egitto.",
+          "entita": [
+            {
+              "nome": "Azienda Orizzonte",
+              "tipo": "azienda",
+              "descrizione": "azienda energetica",
+              "menzione": "Azienda Orizzonte"
+            }
+          ],
+          "luoghi": [
+            {
+              "nome": "Il Cairo",
+              "tipo": "citta",
+              "paese": "EG",
+              "menzione": "Cairo"
+            },
+            {
+              "nome": "Egitto",
+              "tipo": "paese",
+              "paese": "EG",
+              "menzione": "Egitto"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "titolo": "Incontri in Crimea",
+      "fonti": [
+        "b000000001"
+      ],
+      "frasi": [
+        {
+          "testo": "Una fonte riferisce di incontri in Crimea.",
+          "entita": [],
+          "luoghi": [
+            {
+              "nome": "Crimea",
+              "tipo": "regione",
+              "paese": "UA",
+              "menzione": "Crimea"
             }
           ]
         }
