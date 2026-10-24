@@ -16,7 +16,12 @@
     audio: audio,
     ascolta: function (fn) { ascoltatori.push(fn); },        // fn(t, forzato) a ogni aggiornamento
     suFrase: function (fn) { suFraseCb.push(fn); },          // fn(elementoFrase) quando cambia la frase
-    suVisibilita: function (fn) { suVisCb.push(fn); }        // fn() quando il pannello visivo cambia dimensione
+    suVisibilita: function (fn) { suVisCb.push(fn); },       // fn() quando il pannello visivo cambia dimensione
+    mostraVisivo: function () {                              // chiamata da mappa.js / citati.js quando hanno dati
+      var v = document.getElementById("visivo"), l = document.getElementById("layout");
+      if (v) v.hidden = false;
+      if (l) l.classList.add("con-visivo");
+    }
   };
 
   function notifica(forzato) {
@@ -36,7 +41,29 @@
     return r;
   }
 
-  function aggiorna(forza) {
+  // Limite alto dell'area realmente visibile: sotto il player fisso e, sul telefono,
+  // sotto la mappa fissa. Il testo evidenziato va centrato LÌ, non nello schermo intero.
+  function limiteAltoUtile() {
+    var player = document.getElementById("player"), visivo = document.getElementById("visivo");
+    var alto = player ? player.getBoundingClientRect().bottom : 0;
+    var stretto = window.matchMedia && window.matchMedia("(max-width: 899px)").matches;
+    if (stretto && visivo && !visivo.hidden && getComputedStyle(visivo).display !== "none") {
+      alto = Math.max(alto, visivo.getBoundingClientRect().bottom);
+    }
+    return Math.max(0, alto);
+  }
+
+  function scrollSuFrase(el, istantaneo) {
+    var layout = document.getElementById("layout");
+    if (layout && layout.classList.contains("testo-nascosto")) return;       // il testo non si vede
+    var alto = limiteAltoUtile(), basso = window.innerHeight, margine = 16;
+    var r = el.getBoundingClientRect();
+    if (r.top >= alto + margine && r.bottom <= basso - margine) return;      // già ben visibile: non muovere
+    var delta = (r.top + r.height / 2) - (alto + (basso - alto) / 2);
+    window.scrollBy({ top: delta, behavior: istantaneo ? "auto" : "smooth" });
+  }
+
+  function aggiorna(forza, senzaScroll) {
     var i = indice(audio.currentTime);
     if (i !== corrente) {
       if (corrente >= 0) frasi[corrente].classList.remove("attiva");
@@ -44,8 +71,8 @@
       if (i >= 0) {
         frasi[i].classList.add("attiva");
         suFraseCb.forEach(function (fn) { try { fn(frasi[i]); } catch (e) {} });
-        if (autoscroll && autoscroll.checked && (forza || !audio.paused)) {
-          frasi[i].scrollIntoView({ block: "center", behavior: forza ? "auto" : "smooth" });
+        if (autoscroll && autoscroll.checked && !senzaScroll && (forza || !audio.paused)) {
+          scrollSuFrase(frasi[i], forza);
         }
       }
     }
@@ -61,7 +88,7 @@
   audio.addEventListener("timeupdate", function () { aggiorna(false); });
   audio.addEventListener("seeked", function () { aggiorna(true); });
   audio.addEventListener("ended", function () { aggiorna(false); });
-  audio.addEventListener("loadedmetadata", function () { aggiorna(true); });
+  audio.addEventListener("loadedmetadata", function () { aggiorna(true, true); });
 
   function vai(t) {
     audio.currentTime = t;
@@ -116,18 +143,45 @@
   if (piu) piu.addEventListener("click", function () { applicaZoom(zoom + 0.1); });
   if (meno) meno.addEventListener("click", function () { applicaZoom(zoom - 0.1); });
 
+  var layout = document.getElementById("layout");
   var mostra = document.getElementById("mostra-visivo"), visivo = document.getElementById("visivo");
-  if (mostra && visivo) {
+  function ridimensionato() { suVisCb.forEach(function (fn) { try { fn(); } catch (e) {} }); }
+
+  // "Mappa e immagini": mostra/nasconde la colonna di destra (il testo torna a tutta larghezza)
+  if (mostra && visivo && layout) {
     mostra.checked = leggi("visivo") !== "0";
     var applicaVisivo = function () {
-      visivo.classList.toggle("nascosto", !mostra.checked);
-      suVisCb.forEach(function (fn) { try { fn(); } catch (e) {} });
+      layout.classList.toggle("senza-visivo", !mostra.checked);
+      ridimensionato();
     };
     mostra.addEventListener("change", function () { scrivi("visivo", mostra.checked ? "1" : "0"); applicaVisivo(); });
     applicaVisivo();
   }
-  if (window.ResizeObserver && visivo) {
-    new ResizeObserver(function () { suVisCb.forEach(function (fn) { try { fn(); } catch (e) {} }); }).observe(visivo);
+
+  // "Nascondi testo": la mappa prende tutta la larghezza
+  var btnTesto = document.getElementById("toggle-testo");
+  if (btnTesto && layout) {
+    var applicaTesto = function (nascosto) {
+      layout.classList.toggle("testo-nascosto", nascosto);
+      btnTesto.textContent = nascosto ? "Mostra testo" : "Nascondi testo";
+      btnTesto.setAttribute("aria-expanded", nascosto ? "false" : "true");
+      ridimensionato();
+    };
+    applicaTesto(leggi("testo") === "0");
+    btnTesto.addEventListener("click", function () {
+      var nascondi = !layout.classList.contains("testo-nascosto");
+      scrivi("testo", nascondi ? "0" : "1");
+      applicaTesto(nascondi);
+    });
+  }
+
+  // l'area visiva resta ferma sotto il player: serve l'altezza del player
+  var player = document.getElementById("player");
+  function misuraPlayer() { if (player) radice.style.setProperty("--alt-player", player.offsetHeight + "px"); }
+  misuraPlayer();
+  if (window.ResizeObserver) {
+    if (player) new ResizeObserver(misuraPlayer).observe(player);
+    if (visivo) new ResizeObserver(ridimensionato).observe(visivo);
   }
 
   // ---- Media Session: controlli a schermo bloccato (nessun autoplay) ----
@@ -158,5 +212,5 @@
     });
   }
 
-  aggiorna(true);
+  aggiorna(true, true);        // stato iniziale: evidenzia la frase ma non sposta la pagina
 })();

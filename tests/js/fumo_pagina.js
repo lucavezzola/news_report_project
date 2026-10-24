@@ -34,6 +34,11 @@ w.fetch = (url) => {
                           : Promise.reject(new Error("404 " + rel));
 };
 
+// telefono (schermo stretto) e scroll osservabile
+w.matchMedia = (q) => ({ matches: /max-width: 899px/.test(q), addEventListener() {} });
+const scrolli = [];
+w.scrollBy = (o) => scrolli.push(o);
+
 // esegue gli script nell'ordine del documento
 for (const s of w.document.querySelectorAll("script[src]")) {
   const file = path.join(radice, giorno, s.getAttribute("src"));
@@ -76,6 +81,34 @@ const out = { errori };
   }
   // niente HTML iniettato né script inattesi
   out.script_nel_citati = doc.querySelectorAll("#citati script").length;
+  // scroll sul telefono: la frase evidenziata NON deve finire dietro player + mappa fissi
+  const rect = (top, bottom) => ({ top, bottom, height: bottom - top, left: 0, right: 0, width: 0 });
+  doc.getElementById("player").getBoundingClientRect = () => rect(0, 90);
+  doc.getElementById("visivo").getBoundingClientRect = () => rect(90, 300);       // mappa fissa: copre fino a y=300
+  const f8 = doc.querySelectorAll(".frase")[8];
+  f8.getBoundingClientRect = () => rect(120, 160);                                  // frase nascosta dietro la mappa
+  scrolli.length = 0;
+  vai(parseFloat(f8.getAttribute("data-inizio")) + 0.05);
+  const areaUtile = 300 + (w.innerHeight - 300) / 2;                                // centro della zona visibile
+  out.scroll_nascosta = scrolli.length === 1 ? scrolli[0].top : null;
+  out.scroll_atteso = (120 + 20) - areaUtile;
+  f8.getBoundingClientRect = () => rect(400, 440);                                  // già visibile sotto la mappa
+  scrolli.length = 0;
+  vai(parseFloat(f8.getAttribute("data-inizio")) + 0.06);
+  out.scroll_se_visibile = scrolli.length;
+
+  // layout: colonna visiva attiva; "Nascondi testo" e "Mappa e immagini" commutano le classi
+  const layout = doc.getElementById("layout");
+  out.layout_con_visivo = layout.classList.contains("con-visivo");
+  out.visivo_dentro_layout = layout.contains(doc.getElementById("visivo"));
+  doc.getElementById("toggle-testo").click();
+  out.testo_nascosto = layout.classList.contains("testo-nascosto");
+  out.etichetta_toggle = doc.getElementById("toggle-testo").textContent;
+  doc.getElementById("toggle-testo").click();
+  out.testo_ripristinato = !layout.classList.contains("testo-nascosto");
+  const mv = doc.getElementById("mostra-visivo"); mv.checked = false; mv.dispatchEvent(new w.Event("change"));
+  out.senza_visivo = layout.classList.contains("senza-visivo");
+  mv.checked = true; mv.dispatchEvent(new w.Event("change"));
   // tema e dimensione testo
   const bt = doc.getElementById("tema"); bt.click();
   out.tema_dopo_clic = doc.documentElement.getAttribute("data-tema");

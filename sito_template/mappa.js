@@ -16,7 +16,7 @@
   var luoghi = dati.luoghi || {};
 
   elMappa.hidden = false;
-  visivo.hidden = false;
+  R.mostraVisivo();
   visivo.classList.add("con-mappa");
 
   var mappa = L.map(elMappa, {

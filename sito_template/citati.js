@@ -22,7 +22,7 @@
   });
   if (!eventi.length) { return; }
   eventi.sort(function (a, b) { return a.inizio - b.inizio; });
-  visivo.hidden = false;
+  R.mostraVisivo();
 
   var mostrate = {};   // id -> elemento
 

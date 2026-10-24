@@ -46,17 +46,13 @@
       </select>
     </label>
     <label><input type="checkbox" id="autoscroll" checked> Segui il testo</label>
-    {% if ha_visivo %}<label><input type="checkbox" id="mostra-visivo" checked> Mappa e immagini</label>{% endif %}
+    {% if ha_visivo %}<label><input type="checkbox" id="mostra-visivo" checked> Mappa e immagini</label>
+    <button type="button" id="toggle-testo" class="pulsante" aria-expanded="true" aria-controls="contenuto">Nascondi testo</button>{% endif %}
   </div>
-  {% if ha_visivo %}
-  <div id="visivo" class="visivo" hidden>
-    <div id="mappa" class="mappa" hidden role="img" aria-label="Mappa dei luoghi citati"></div>
-    <div id="citati" class="citati"></div>
-  </div>
-  {% endif %}
 </div>
 
-<main id="contenuto">
+<div class="layout" id="layout">
+<main id="contenuto" class="colonna-testo">
 <details class="indice">
   <summary>Indice</summary>
   {% for sez in manifest.sezioni %}
@@ -108,6 +104,13 @@
 </details>
 {% endif %}
 </main>
+{% if ha_visivo %}
+<aside id="visivo" class="visivo" hidden aria-label="Mappa e immagini">
+  <div id="mappa" class="mappa" hidden role="img" aria-label="Mappa dei luoghi citati"></div>
+  <div id="citati" class="citati"></div>
+</aside>
+{% endif %}
+</div>
 <footer>
   <p>Testo generato automaticamente a partire dalle fonti linkate; verifica sempre le notizie alla fonte.</p>
   {% if ha_mappa %}<p>Confini: Natural Earth (pubblico dominio); regioni e province italiane: ISTAT, elaborazione Openpolis (CC BY). Mappa con Leaflet. I confini rappresentati non implicano una presa di posizione.</p>{% endif %}

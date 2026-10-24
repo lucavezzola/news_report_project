@@ -64,6 +64,9 @@ def test_html_pagina(giorno):
     cartella, _ = giorno
     h = (cartella / "index.html").read_text(encoding="utf-8")
     assert 'id="dati-visivi"' in h and "data-entita=" in h and 'data-mappa="1"' in h and 'data-mappa="0"' in h
+    # layout a due colonne: testo a sinistra, colonna visiva a destra, entrambi dentro .layout
+    assert h.index('class="layout"') < h.index('id="contenuto"') < h.index('id="visivo"') < h.index("</div>", h.index('id="visivo"'))
+    assert 'id="toggle-testo"' in h and 'aria-expanded="true"' in h and 'id="citati"' in h
     assert "javascript:" not in h and "Crediti delle immagini" in h
     assert "CC BY-SA 4.0" in h and "CC BY-NC" not in h
     assert "Natural Earth" in h and "ISTAT" in h                          # attribuzioni
@@ -112,4 +115,8 @@ def test_fumo_in_jsdom(giorno):
     assert out["ha_Rassegna"] and out["visivo_visibile"] and out["clic_ok"] and out["percorsi_mappa"] > 50
     assert all(s["attive"] == 1 and s["carte"] <= 3 for s in out["seek"])
     assert out["carta_prima_entita"] == ["Anna Verdi"] and out["immagini_carte"] == ["../img/Q900001.jpg"]
+    assert out["scroll_nascosta"] is not None and abs(out["scroll_nascosta"] - out["scroll_atteso"]) < 1e-6 and out["scroll_nascosta"] < 0
+    assert out["scroll_se_visibile"] == 0                                # frase già visibile: nessun movimento
+    assert out["layout_con_visivo"] and out["visivo_dentro_layout"]
+    assert out["testo_nascosto"] and out["etichetta_toggle"] == "Mostra testo" and out["testo_ripristinato"] and out["senza_visivo"]
     assert out["script_nel_citati"] == 0 and out["tema_dopo_clic"] == "chiaro" and out["zoom"] == "1.1"

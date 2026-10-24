@@ -4,19 +4,21 @@
   --map-bg:#1a232c;--map-land:#2b3138;--map-line:#4a5560;--map-accent:#7db7f5;color-scheme:dark}}
 :root[data-tema="scuro"]{--bg:#121212;--fg:#ececea;--mut:#a8a8a8;--acc:#7db7f5;--card:#1e1e1c;--att:#4a4310;--bord:#333;
   --map-bg:#1a232c;--map-land:#2b3138;--map-line:#4a5560;--map-accent:#7db7f5;color-scheme:dark}
-html{font-size:calc(100% * var(--zoom,1))}
+html{font-size:calc(100% * var(--zoom,1));--largh:72rem}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:1.0625rem/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
   padding:0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 a{color:var(--acc)}
-.testata,main,footer{max-width:46rem;margin:0 auto;padding:.75rem 1rem;overflow-wrap:anywhere}
+.testata,footer{max-width:var(--largh);margin:0 auto;padding:.75rem 1rem;overflow-wrap:anywhere}
+.layout{max-width:var(--largh);margin:0 auto;padding:.25rem 1rem;overflow-wrap:anywhere}
+.layout:not(.con-visivo) .colonna-testo{max-width:46rem}
 .testata{padding-top:calc(.75rem + env(safe-area-inset-top))}
 .testata h1{margin:.2rem 0;font-size:1.5rem;line-height:1.25}
 .sito{margin:0;font-size:.85rem}.sito a{text-decoration:none}
 .meta{color:var(--mut);margin:.2rem 0;font-size:.9rem}
 .player{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--bord);padding:.5rem 1rem}
-.player audio{width:100%;max-width:46rem;display:block;margin:0 auto}
-.opzioni{max-width:46rem;margin:.3rem auto 0;display:flex;gap:1rem;flex-wrap:wrap;font-size:.9rem}
+.player audio{width:100%;max-width:var(--largh);display:block;margin:0 auto}
+.opzioni{max-width:var(--largh);margin:.3rem auto 0;display:flex;gap:.4rem 1rem;flex-wrap:wrap;align-items:center;font-size:.9rem}
 h2{font-size:1.25rem;border-bottom:2px solid var(--bord);padding-bottom:.2rem;margin-top:2rem}
 h3{font-size:1.1rem;margin:1.2rem 0 .3rem}
 .badge{font-size:.7rem;font-weight:600;background:var(--card);border:1px solid var(--bord);border-radius:.6rem;padding:.05rem .5rem;vertical-align:middle;white-space:nowrap}
@@ -41,25 +43,40 @@ footer{color:var(--mut);font-size:.8rem}
 .salta{position:absolute;left:-999px;top:0;background:var(--bg);color:var(--fg);padding:.5rem 1rem;z-index:20}
 .salta:focus{left:.5rem;top:.5rem}
 .controlli{margin:.4rem 0 0;display:flex;gap:.5rem;flex-wrap:wrap}
-.controlli button,.opzioni select{font:inherit;font-size:.85rem;min-height:2.25rem;padding:.2rem .7rem;border:1px solid var(--bord);
+.controlli button,.opzioni select,.opzioni .pulsante{font:inherit;font-size:.85rem;min-height:2.25rem;padding:.2rem .7rem;border:1px solid var(--bord);
   border-radius:.4rem;background:var(--card);color:var(--fg);cursor:pointer}
 .opzioni label{display:inline-flex;align-items:center;gap:.35rem;min-height:2rem}
-/* pannello visivo (mappa + carte), dentro l'area sticky del player */
-.visivo{position:relative;max-width:46rem;margin:.4rem auto 0}
-.visivo.nascosto{display:none}
-.mappa{height:clamp(120px,26vh,240px);background:var(--map-bg);border-radius:.5rem;overflow:hidden}
+/* layout: testo a sinistra (comprimibile), mappa a destra con le carte sotto */
+.visivo{display:flex;flex-direction:column;gap:.5rem;min-width:0}
+.senza-visivo .visivo{display:none}
+.layout.testo-nascosto .colonna-testo{display:none}
+.mappa{height:clamp(110px,22vh,200px);background:var(--map-bg);border-radius:.5rem;overflow:hidden}
 .visivo.senza-mappa .mappa{display:none}
-.citati{display:flex;gap:.4rem;pointer-events:none}
-.visivo.con-mappa:not(.senza-mappa) .citati{position:absolute;left:.4rem;right:.4rem;bottom:.4rem;z-index:500}
-.visivo.senza-mappa .citati{min-height:0}
-.carta{display:flex;align-items:center;gap:.5rem;margin:0;padding:.25rem .5rem .25rem .25rem;max-width:33%;min-width:0;
-  background:color-mix(in srgb,var(--bg) 92%,transparent);border:1px solid var(--bord);border-radius:.5rem;font-size:.75rem;line-height:1.2}
-.carta img,.carta-badge{width:2.6rem;height:2.6rem;flex:none;border-radius:.4rem;object-fit:cover}
+.citati{display:flex;flex-wrap:wrap;gap:.4rem;min-height:3.4rem;align-content:flex-start}
+.carta{display:flex;align-items:center;gap:.5rem;margin:0;padding:.25rem .6rem .25rem .25rem;flex:1 1 9rem;max-width:16rem;min-width:0;
+  background:var(--card);border:1px solid var(--bord);border-radius:.5rem;font-size:.8rem;line-height:1.25}
+.carta img,.carta-badge{width:2.8rem;height:2.8rem;flex:none;border-radius:.4rem;object-fit:cover}
 .carta-badge{display:flex;align-items:center;justify-content:center;background:var(--acc);color:#fff;font-weight:700;font-size:1.1rem}
 .carta figcaption{display:flex;flex-direction:column;min-width:0}
 .carta strong,.carta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .carta span{color:var(--mut)}
-@media (max-width:520px){.carta{max-width:48%}.carta:nth-child(n+3){display:none}.carta figcaption span{display:none}}
+/* telefono e schermi stretti: mappa in alto, fissa sotto il player; testo sotto */
+@media (max-width:899px){
+  .layout.con-visivo{display:flex;flex-direction:column}
+  .layout.con-visivo .visivo{order:-1;position:sticky;top:var(--alt-player,5rem);z-index:4;background:var(--bg);padding:.4rem 0;
+    border-bottom:1px solid var(--bord)}
+  .carta{flex:1 1 40%;max-width:none}
+  .carta:nth-child(n+3){display:none}
+  .carta figcaption span{display:none}
+}
+/* PC e tablet larghi: due colonne, la colonna visiva resta ferma mentre il testo scorre */
+@media (min-width:900px){
+  .layout.con-visivo:not(.senza-visivo){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:1.5rem;align-items:start}
+  .layout.con-visivo.testo-nascosto{grid-template-columns:minmax(0,1fr)}
+  .layout.con-visivo .visivo{position:sticky;top:calc(var(--alt-player,5.5rem) + .5rem)}
+  .mappa{height:clamp(280px,56vh,620px)}
+  .carta img,.carta-badge{width:3.4rem;height:3.4rem}
+}
 .crediti{font-size:.8rem;color:var(--mut);margin:1.5rem 0}
 .crediti summary{cursor:pointer}
 footer p{margin:.3rem 0}
