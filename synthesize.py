@@ -81,7 +81,7 @@ Il testo è letto da un sintetizzatore vocale e mostrato come sottotitolo, una f
 
 <metadati>
 Per ogni frase, se pertinente:
-- "entita": persone pubbliche notabili, partiti, aziende, istituzioni, paesi o organizzazioni nominati. "tipo" è uno tra: persona, partito, azienda, istituzione, paese, organizzazione, altro. "descrizione" è il ruolo in poche parole. "menzione" è il testo ESATTO, copiato carattere per carattere, con cui l'entità compare in quella frase.
+- "entita": persone pubbliche notabili, partiti, aziende, istituzioni, paesi o organizzazioni nominati. "tipo" è uno tra: persona, partito, azienda, istituzione, paese, organizzazione, altro. "nome" è SEMPRE il nome completo e ufficiale, anche se nel testo compare abbreviato (esempi: "Giorgia Meloni" per "Meloni"; "Partito Democratico" per "Pd"; "Fratelli d'Italia" per "FdI"); è quello che si cerca su Wikidata. "descrizione" è il ruolo in poche parole. "menzione" è il testo ESATTO, copiato carattere per carattere, con cui l'entità compare in quella frase (può essere diverso da "nome").
 - "luoghi": luoghi geografici realmente nominati nella frase. "tipo" è uno tra: paese, regione, provincia, citta, luogo. "paese" è il codice ISO 3166-1 alpha-2 (es. IT, US, UA). "menzione" è il testo ESATTO con cui il luogo compare nella frase.
 - Non inventare entità o luoghi non nominati. Niente vittime, privati cittadini o indagati non notabili tra le entità.
 - Se non ce ne sono, lascia le liste vuote.

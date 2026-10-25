@@ -98,8 +98,25 @@ def _numero_it(testo_num):
     return _parole(testo_num)
 
 
+MESI_LISTA = MESI.split("|")
+
+
+def _data_numerica(m):
+    g, mese, anno = int(m.group(1)), int(m.group(2)), m.group(3)
+    if 1 <= g <= 31 and 1 <= mese <= 12:
+        return f"{g} {MESI_LISTA[mese - 1]} {anno}"
+    return m.group(0)
+
+
 def _numeri_a_parole(t):
-    # migliaia con punto: 1.500.000 -> 1500000 (ma non 3.5 né date 13.09.2026)
+    # Le stesse regole che prima stavano in tts._pulisci_numeri (che ora non vede più
+    # le cifre, già convertite qui): il punto NON deve mai diventare un punto fermo
+    # in mezzo alla frase ("2.8" letto "due. otto").
+    # date numeriche: 13.09.2026 o 13/09/2026 -> 13 settembre 2026
+    t = re.sub(r"\b(\d{1,2})[./](\d{1,2})[./](\d{4})\b", _data_numerica, t)
+    # 0.123 / 0.5: decimale (mai migliaia)
+    t = re.sub(r"(?<![\d.])0\.(?=\d)", "0,", t)
+    # migliaia con punto: 1.500.000 -> 1500000 (esattamente 3 cifre dopo il punto)
     t = re.sub(r"(?<=\d)\.(?=\d{3}(?!\d))", "", t)
     # spazio come separatore di migliaia: 1 500 000
     t = re.sub(r"\b(\d{1,3})(?: (\d{3}))+\b", lambda m: m.group(0).replace(" ", ""), t)
@@ -111,6 +128,9 @@ def _numeri_a_parole(t):
         return f"{m.group(1)}{s}"
     t = re.sub(r"(\b(?:alle|ore|le)\s+)(\d{1,2})[:.](\d{2})\b", _ora, t, flags=re.IGNORECASE)
     t = re.sub(r"\b(\d{1,2}):(\d{2})\b", lambda m: _parole(m.group(1)) + ("" if m.group(2) == "00" else " e " + _parole(m.group(2))), t)
+
+    # punto decimale residuo (1-2 cifre dopo il punto): 2.8 -> 2,8 (dopo gli orari, che usano il punto)
+    t = re.sub(r"(?<=\d)\.(?=\d{1,2}(?!\d))", ",", t)
 
     # "1 ottobre" -> "primo ottobre"
     t = re.sub(rf"\b1(?:º|°)?\s+({MESI})\b", r"primo \1", t, flags=re.IGNORECASE)
@@ -128,12 +148,12 @@ def _numeri_a_parole(t):
 
     # valute: €5, 5€, 5 euro, $5 ; con milioni/miliardi
     scala = r"(?:\s+(milioni|miliardi|mila))?"
-    t = re.sub(rf"(\d+(?:,\d+)?){scala}\s?(?:€|euro\b)",
-               lambda m: _numero_it(m.group(1)) + (f" {m.group(2)}" if m.group(2) else "") + " euro", t, flags=re.IGNORECASE)
-    t = re.sub(rf"€\s?(\d+(?:,\d+)?){scala}",
-               lambda m: _numero_it(m.group(1)) + (f" {m.group(2)}" if m.group(2) else "") + " euro", t)
-    t = re.sub(rf"\$\s?(\d+(?:,\d+)?){scala}",
-               lambda m: _numero_it(m.group(1)) + (f" {m.group(2)}" if m.group(2) else "") + " dollari", t)
+    def _importo(m, valuta):
+        # "2,8 milioni" + valuta -> "due virgola otto milioni di euro" (con la scala serve il "di")
+        return _numero_it(m.group(1)) + (f" {m.group(2)} di " if m.group(2) else " ") + valuta
+    t = re.sub(rf"(\d+(?:,\d+)?){scala}\s?(?:€|euro\b)", lambda m: _importo(m, "euro"), t, flags=re.IGNORECASE)
+    t = re.sub(rf"€\s?(\d+(?:,\d+)?){scala}", lambda m: _importo(m, "euro"), t)
+    t = re.sub(rf"\$\s?(\d+(?:,\d+)?){scala}", lambda m: _importo(m, "dollari"), t)
     t = re.sub(r"(\d+(?:,\d+)?)\s?\$", lambda m: _numero_it(m.group(1)) + " dollari", t)
 
     t = t.replace("€", " euro ").replace("$", " dollari ")

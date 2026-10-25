@@ -74,6 +74,18 @@ def test_html_pagina(giorno):
     assert len(h.encode()) < 1_000_000
 
 
+def test_palette_nel_css_e_nel_template(giorno):
+    cartella, radice = giorno
+    css = (radice / "static" / "style.css").read_text(encoding="utf-8")
+    nomi = ["menta", "lavanda", "pesca", "cielo", "rosa", "limone", "salvia"]
+    for n in nomi:
+        assert f':root[data-palette="{n}"]' in css
+    assert len(set(re.findall(r'data-palette="(\w+)"\]\{--h:(\d+)', css))) == 7      # sette tinte distinte
+    h = (cartella / "index.html").read_text(encoding="utf-8")
+    assert 'id="palette"' in h and all(f'value="{n}"' in h for n in nomi)
+    assert all(f'"{n}"' in h for n in nomi)                                          # lo script iniziale evita il lampo
+
+
 def test_dati_visivi_sanificati(giorno):
     cartella, _ = giorno
     h = (cartella / "index.html").read_text(encoding="utf-8")
@@ -81,6 +93,8 @@ def test_dati_visivi_sanificati(giorno):
     assert dati["base"] == "../"
     for e in dati["entita"].values():
         assert e["immagine"] is None or re.fullmatch(r"img/[A-Za-z0-9_.-]+", e["immagine"])
+    assert all(e["tipo"] in sito.TIPI_ENTITA for e in dati["entita"].values())
+    assert any(len(e["descrizione"]) > 80 for e in dati["entita"].values())          # descrizione NON più troncata a 80
     assert all(isinstance(l["lat"], float) and isinstance(l["lon"], float) for l in dati["luoghi"].values())
 
 
@@ -119,4 +133,14 @@ def test_fumo_in_jsdom(giorno):
     assert out["scroll_se_visibile"] == 0                                # frase già visibile: nessun movimento
     assert out["layout_con_visivo"] and out["visivo_dentro_layout"]
     assert out["testo_nascosto"] and out["etichetta_toggle"] == "Mostra testo" and out["testo_ripristinato"] and out["senza_visivo"]
+    # mappa: punti con il nome sopra; corrente pieno, storico tratteggiato e sempre più sbiadito
+    assert out["mappa_pieni"] >= 1 and out["mappa_tratteggiati"] >= 3
+    ops = out["mappa_opacita_storico"]
+    assert len(set(ops)) == len(ops) and all(0.17 <= o <= 0.71 for o in ops)           # ognuno più sbiadito del precedente
+    assert len(out["etichette"]) >= 4 and all(isinstance(e, str) and e for e in out["etichette"])
+    # carte: persone con foto, altri tipi con logo intero; descrizione completa e trattenibile
+    assert out["carta_persona_logo"] is False and out["carta_istituzione_logo"] is True and out["carta_titolo_completo"]
+    assert out["carta_espansa"] and out["carta_resta_se_fissata"] and out["carta_sparisce_dopo_chiusura"]
+    assert out["dissolvenza_conclusa"]
+    assert len(out["palette_opzioni"]) == 8 and out["palette_menta"] == "menta" and out["palette_tolta"] is None
     assert out["script_nel_citati"] == 0 and out["tema_dopo_clic"] == "chiaro" and out["zoom"] == "1.1"

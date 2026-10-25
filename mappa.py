@@ -9,9 +9,13 @@ Viste:  {"tipo":"mondo"} · {"tipo":"italia"} ·
         {"tipo":"punto","lat","lon","zoom"} · {"tipo":"bounds","sw":[lat,lon],"ne":[lat,lon]}
 
 Modalità per sezione (config.MAPPA_MODALITA):
-  fissa  vista sull'Italia, luoghi evidenziati e accumulati (attivo / già citato)
-  zoom   zoom sul luogo, ritorno alla vista mondo a fine notizia
+  fissa  vista sull'Italia, luoghi evidenziati e accumulati per tutta la sezione
+  zoom   zoom sul luogo; lo storico si accumula dentro la notizia e si azzera col
+         "torna al mondo" di fine notizia
   auto   come zoom, ma la mappa si mostra solo nelle notizie con luoghi
+
+Storico: "citati" è ordinato dal più recente al più vecchio; il front-end sbiadisce
+i luoghi in base a questa posizione (bordo tratteggiato) e disegna il corrente pieno.
 
 `stato_a()` rispecchia esattamente quanto fa mappa_logica.js: serve a testare
 che dopo un seek lo stato dipenda solo dal tempo e non dalla storia.
@@ -126,7 +130,9 @@ def calcola_keyframe(sezioni, luoghi, fusione_s=None, span_max=None):
                     ultimo_t = t_prec
             non_scavalcare(ultimo_reset, nuovi[0][0])
             for t, vista, lids in nuovi:
-                kf(t, sid, False, vista, lids)
+                # cumula=True: i luoghi già citati in QUESTA notizia restano come storico (sbiaditi);
+                # il "torna al mondo" a fine notizia (cumula=False) azzera lo storico.
+                kf(t, sid, True, vista, lids)
             # fine notizia: torna al mondo, ma lascia l'ultimo luogo visibile almeno 'gap' secondi
             ultimo_reset = kf(max(n["fine"], ultimo_t + gap), sid, False, VISTA_MONDO, [])
 

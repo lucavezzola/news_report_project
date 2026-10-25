@@ -15,6 +15,7 @@ Non è consulenza legale: se il sito diventasse pubblico, rivalutare le licenze.
 
 import html
 import json
+import math
 import re
 import time
 import unicodedata
@@ -45,6 +46,15 @@ def _token(testo):
 # ---------------------------------------------------------------------------
 # Scelta del candidato (funzioni pure)
 # ---------------------------------------------------------------------------
+def bonus_notorieta(sitelinks, soglia=None):
+    """0 sotto la soglia, poi +1 per ogni raddoppio (10→0, 20→1, 40→2, 80→3, 160 o più→4):
+    fra due omonimi, quello molto più noto vince nettamente."""
+    soglia = config.SOGLIA_NOTORIETA_SITELINKS if soglia is None else soglia
+    if sitelinks < soglia or soglia <= 0:
+        return 0
+    return min(4, int(math.log2(sitelinks / soglia)))
+
+
 def punteggio_candidato(cand, nome, tipo, descrizione, soglia_sitelinks=None):
     """Ritorna (punteggio, motivo_scarto). punteggio None = candidato scartato.
     cand: {"qid","etichette":[str],"descrizione":str,"p31":[qid],"sitelinks":int}"""
@@ -72,8 +82,7 @@ def punteggio_candidato(cand, nome, tipo, descrizione, soglia_sitelinks=None):
     if classi & set(cand["p31"]):
         punti += 2
     punti += min(4, 2 * in_comune)
-    if cand["sitelinks"] >= 3 * soglia:
-        punti += 1
+    punti += bonus_notorieta(cand["sitelinks"], soglia)
     return punti, None
 
 
@@ -95,6 +104,17 @@ def scegli_candidato(candidati, nome, tipo, descrizione):
     return migliore, "ok"
 
 
+def riassumi_candidati(candidati, nome, tipo, descrizione):
+    """Una riga per candidato: QID, etichetta, sitelinks, punteggio o motivo dello scarto.
+    Serve ai log e a diagnosi_entita.py per capire perché una entità non è stata risolta."""
+    righe = []
+    for c in candidati:
+        p, motivo = punteggio_candidato(c, nome, tipo, descrizione)
+        esito = f"punteggio {p}" if p is not None else f"scartato: {motivo}"
+        righe.append(f"{c['qid']} {c.get('etichetta') or c['etichette'][:1]} ({c['sitelinks']} sitelinks) -> {esito}")
+    return righe
+
+
 def licenza_ammessa(licenza):
     """Solo CC BY / CC BY-SA, CC0, pubblico dominio. Niente NC (non commerciale),
     ND (nessuna derivazione: noi ridimensioniamo), fair use o licenze ignote."""
@@ -103,7 +123,9 @@ def licenza_ammessa(licenza):
         return False
     if re.search(r"\b(nc|nd)\b|non-?commercial|no-?deriv|fair use|copyrighted|all rights", l):
         return False
-    return bool(re.match(r"(cc[ -]?by|cc0|cc[ -]?zero|public domain|pd[ -]|pd$|no known copyright)", l))
+    if re.match(r"(cc[ -]?by|cc0|cc[ -]?zero|public domain|pd[ -]|pd$|no known copyright|attribution)", l):
+        return True
+    return any(re.search(extra, l) for extra in config.LICENZE_EXTRA_AMMESSE)
 
 
 # ---------------------------------------------------------------------------
@@ -225,12 +247,17 @@ class Wikidata:
                 "colore": colore if isinstance(colore, str) and re.fullmatch(r"[0-9A-Fa-f]{6}", colore) else None}
 
     # --------------------------------------------------------------- immagini
-    def _immagine_da_claims(self, claims, tipo):
+    def _immagini_da_claims(self, claims, tipo, massimo=3):
+        """Nomi file candidati, nell'ordine: per proprietà (come da config) e, dentro
+        ciascuna, prima il valore 'preferito'. Se la prima ha una licenza non ammessa si prova la successiva."""
+        trovati = []
         for prop in config.WIKIDATA_PROPRIETA_IMMAGINE.get(tipo, ["P18"]):
-            nome_file = self._valore_claim(claims, prop)
-            if isinstance(nome_file, str):
-                return nome_file
-        return None
+            voci = sorted(claims.get(prop, []), key=lambda v: 0 if v.get("rank") == "preferred" else 1)
+            for v in voci:
+                valore = (v.get("mainsnak", {}).get("datavalue") or {}).get("value")
+                if v.get("rank") != "deprecated" and isinstance(valore, str) and valore not in trovati:
+                    trovati.append(valore)
+        return trovati[:massimo]
 
     def _info_commons(self, nome_file):
         r = self._api(config.COMMONS_API, {
@@ -307,7 +334,11 @@ class Wikidata:
                 cands = self._carica_entita([ov["qid"]])
                 scelto, motivo = (cands[0], "override") if cands else (None, "QID da override inesistente")
             else:
-                scelto, motivo = scegli_candidato(self._carica_entita(self._cerca_qid(nome)), nome, tipo, desc)
+                cands = self._carica_entita(self._cerca_qid(nome))
+                scelto, motivo = scegli_candidato(cands, nome, tipo, desc)
+                if scelto is None:
+                    for riga in riassumi_candidati(cands, nome, tipo, desc)[:5]:
+                        log.info(f"   candidato per {nome!r}: {riga}")
         except Exception as e:
             log.warning(f"Wikidata ha fallito per {nome!r}: {e}")
             self.stats["errori_rete"] += 1
@@ -322,16 +353,22 @@ class Wikidata:
             return None
 
         immagine, crediti = None, None
-        nome_file = None if ov.get("azione") == "senza_immagine" else self._immagine_da_claims(scelto["claims"], tipo)
-        if nome_file:
+        nomi_file = [] if ov.get("azione") == "senza_immagine" else self._immagini_da_claims(scelto["claims"], tipo)
+        for nome_file in nomi_file:                  # la prima con licenza ammessa vince
             try:
                 immagine, esito = self.scarica_immagine(scelto["qid"], nome_file)
-                crediti = esito if immagine else None
-                if not immagine:
-                    log.info(f"Nessuna immagine per {nome!r}: {esito}")
             except Exception as e:
-                log.warning(f"Immagine di {nome!r} non scaricata: {e}")
+                log.warning(f"Immagine {nome_file!r} di {nome!r} non scaricata: {e}")
                 self.stats["errori_rete"] += 1
+                continue
+            if immagine:
+                crediti = esito
+                break
+            log.info(f"Immagine {nome_file!r} di {nome!r} scartata: {esito}")
+        if not immagine and nomi_file:
+            log.info(f"Nessuna immagine utilizzabile per {nome!r} ({len(nomi_file)} candidate): scheda senza immagine")
+        elif not nomi_file and ov.get("azione") != "senza_immagine":
+            log.info(f"{nome!r} ({scelto['qid']}) non ha un'immagine su Wikidata per il tipo {tipo!r}")
         scheda = {"qid": scelto["qid"], "etichetta": scelto["etichetta"] or nome, "descrizione_wd": scelto["descrizione"],
                   "immagine": immagine, "crediti": crediti, "colore": scelto["colore"]}
         self.cache[chiave] = {"scheda": scheda, "data": self.oggi.isoformat(), "ultimo_uso": self.oggi.isoformat(),

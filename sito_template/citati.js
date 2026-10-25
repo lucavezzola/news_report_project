@@ -1,5 +1,8 @@
 // Pannello "Citati ora": carte (immagine, nome, ruolo) per le entità della frase
 // corrente, che restano ~4 s dopo la fine della frase; al massimo 3 insieme.
+// - Persone: foto ritagliata sul volto. Altri tipi (partiti, aziende...): logo INTERO su fondo bianco.
+// - Descrizione accorciata a 2 righe, ma completa: toccare/cliccare la carta la espande e la tiene ferma;
+//   anche passarci sopra con il mouse (o il focus da tastiera) sospende la scomparsa.
 // Tutto con createElement/textContent: i dati arrivano da RSS -> Claude -> Wikidata.
 (function () {
   "use strict";
@@ -24,12 +27,20 @@
   eventi.sort(function (a, b) { return a.inizio - b.inizio; });
   R.mostraVisivo();
 
-  var mostrate = {};   // id -> elemento
+  var mostrate = {};   // id -> elemento (con ._fissa se espansa/cliccata, ._sopra se mouse/focus)
+  var ultimoT = 0, ultimaChiave = null;
+
+  function trattieni(el) { return el._fissa || el._sopra; }
 
   function carta(id) {
     var e = entita[id];
     var fig = document.createElement("figure");
-    fig.className = "carta";
+    fig.className = "carta" + (e.tipo && e.tipo !== "persona" ? " logo" : "");
+    fig.tabIndex = 0;
+    fig.setAttribute("role", "button");
+    fig.setAttribute("aria-expanded", "false");
+    fig.setAttribute("aria-label", e.nome + (e.descrizione ? ": " + e.descrizione : "") + ". Tocca per leggere tutto.");
+    fig.title = e.descrizione ? e.nome + " — " + e.descrizione : e.nome;       // descrizione completa al passaggio del mouse
     if (e.immagine && /^img\/[A-Za-z0-9_.-]+$/.test(e.immagine)) {
       var img = document.createElement("img");
       img.src = BASE + e.immagine; img.alt = ""; img.loading = "lazy"; img.decoding = "async";
@@ -38,7 +49,7 @@
       var badge = document.createElement("div");
       badge.className = "carta-badge";
       badge.textContent = (e.nome || "?").trim().charAt(0).toUpperCase();
-      if (e.colore && /^[0-9A-Fa-f]{6}$/.test(e.colore)) { badge.style.background = "#" + e.colore; }
+      if (e.colore && /^[0-9A-Fa-f]{6}$/.test(e.colore) && !(e.tipo && e.tipo !== "persona")) { badge.style.background = "#" + e.colore; }
       fig.appendChild(badge);
     }
     var cap = document.createElement("figcaption");
@@ -46,6 +57,19 @@
     cap.appendChild(nome);
     if (e.descrizione) { var ruolo = document.createElement("span"); ruolo.textContent = e.descrizione; cap.appendChild(ruolo); }
     fig.appendChild(cap);
+
+    function alterna() {
+      fig._fissa = !fig._fissa;
+      fig.classList.toggle("espansa", fig._fissa);
+      fig.setAttribute("aria-expanded", fig._fissa ? "true" : "false");
+      aggiorna(ultimoT, true);                      // se l'hai chiusa e non è più attuale, sparisce subito
+    }
+    fig.addEventListener("click", alterna);
+    fig.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); alterna(); } });
+    fig.addEventListener("mouseenter", function () { fig._sopra = true; });
+    fig.addEventListener("mouseleave", function () { fig._sopra = false; aggiorna(ultimoT, true); });
+    fig.addEventListener("focus", function () { fig._sopra = true; });
+    fig.addEventListener("blur", function () { fig._sopra = false; aggiorna(ultimoT, true); });
     return fig;
   }
 
@@ -58,18 +82,20 @@
     return ids.reverse();      // la più recente a destra
   }
 
-  var ultimaChiave = null;
-  R.ascolta(function (t, forzato) {
+  function aggiorna(t, forzato) {
+    ultimoT = t;
     var chiave = Math.floor(t * 4);                 // 4 aggiornamenti al secondo bastano
     if (!forzato && chiave === ultimaChiave) { return; }
     ultimaChiave = chiave;
     var ids = attive(t);
     Object.keys(mostrate).forEach(function (id) {
-      if (ids.indexOf(id) < 0) { cont.removeChild(mostrate[id]); delete mostrate[id]; }
+      if (ids.indexOf(id) < 0 && !trattieni(mostrate[id])) { cont.removeChild(mostrate[id]); delete mostrate[id]; }
     });
     ids.forEach(function (id) {
       if (!mostrate[id]) { mostrate[id] = carta(id); }
       cont.appendChild(mostrate[id]);               // riordina: appendChild sposta l'elemento esistente
     });
-  });
+  }
+
+  R.ascolta(aggiorna);
 })();

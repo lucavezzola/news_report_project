@@ -18,7 +18,7 @@
 <meta name="twitter:description" content="{{ descrizione }}">
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="apple-touch-icon" href="../static/icon-192.png">
-<script>try{var t=localStorage.getItem("rassegna:tema");if(t==="chiaro"||t==="scuro")document.documentElement.setAttribute("data-tema",t);var z=parseFloat(localStorage.getItem("rassegna:zoom"));if(z>=0.8&&z<=1.6)document.documentElement.style.setProperty("--zoom",z)}catch(e){}</script>
+<script>try{var d=document.documentElement,t=localStorage.getItem("rassegna:tema");if(t==="chiaro"||t==="scuro")d.setAttribute("data-tema",t);var z=parseFloat(localStorage.getItem("rassegna:zoom"));if(z>=0.8&&z<=1.6)d.style.setProperty("--zoom",z);var p=localStorage.getItem("rassegna:palette");if(["menta","lavanda","pesca","cielo","rosa","limone","salvia"].indexOf(p)>=0)d.setAttribute("data-palette",p)}catch(e){}</script>
 <link rel="stylesheet" href="../static/style.css">
 {% if ha_mappa %}<link rel="stylesheet" href="../static/leaflet/leaflet.css">{% endif %}
 </head>
@@ -32,6 +32,13 @@
     <button type="button" id="testo-meno" aria-label="Riduci il testo">A−</button>
     <button type="button" id="testo-piu" aria-label="Ingrandisci il testo">A+</button>
     <button type="button" id="tema" aria-label="Cambia tema">Tema: auto</button>
+    <label>Palette
+      <select id="palette" aria-label="Palette di colori">
+        <option value="predefinita">Predefinita</option><option value="menta">Menta</option><option value="lavanda">Lavanda</option>
+        <option value="pesca">Pesca</option><option value="cielo">Cielo</option><option value="rosa">Rosa</option>
+        <option value="limone">Limone</option><option value="salvia">Salvia</option>
+      </select>
+    </label>
   </p>
 </header>
 

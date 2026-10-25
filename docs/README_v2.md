@@ -56,3 +56,18 @@ Leggi `docs/confini_contesi.md` e `docs/policy_immagini.md`: contengono scelte e
 4. Le classi Wikidata in `config.WIKIDATA_CLASSI` e la proprietà colore P465 sono scritte a memoria: verificale.
 5. PWA: serve https (Cloudflare Pages va bene). Prova "Aggiungi a Home" e la riapertura con rete assente.
    Il service worker non mette mai in cache l'audio.
+
+## Aggiornamenti di rifinitura (pagina e mappa)
+
+- **Storico sulla mappa:** il luogo corrente è un punto pieno con bordo solido; quelli già citati restano con bordo
+  tratteggiato e sbiadiscono a ogni nuovo punto (da 70% a 18%). Il nome del luogo è scritto sopra ogni punto.
+  In Italia lo storico dura tutta la sezione; in Esteri fino alla fine della notizia.
+- **Zoom e movimenti:** `config.MAPPA_ZOOM_CITTA` (4,5) e `MAPPA_ZOOM_MAX` (5,5). Spostamenti brevi: volo lento di 2,8 s.
+  Spostamenti lunghi: dissolvenza, salto, dissolvenza (niente riquadri vuoti). Costanti in `sito_template/mappa.js`
+  (`DURATA_VOLO`, `DISSOLVENZA_MS`).
+- **Schede:** persone con foto ritagliata sul volto, altri tipi con logo intero su fondo bianco. La descrizione è accorciata
+  a 2 righe ma completa: tocca o clicca la scheda per leggerla tutta (resta ferma finché non la richiudi); sul PC basta
+  passarci sopra col mouse.
+- **Palette:** selettore "Palette" nell'intestazione (Predefinita + 7 pastello: Menta, Lavanda, Pesca, Cielo, Rosa, Limone,
+  Salvia). Funzionano insieme al tema chiaro/scuro/auto. Sono definite in `sito_template/style.css` (una tinta `--h` per palette).
+- **Fonetica:** i decimali con il punto (2.8) e le date numeriche (13.09.2026) sono gestiti come prima in `tts.py`.

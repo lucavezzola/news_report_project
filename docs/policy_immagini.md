@@ -32,3 +32,21 @@ Le chiavi non distinguono maiuscole/accenti. Per i luoghi: `data/luoghi_override
       "Crimea":   {"ignora": true},
       "Taranto":  {"lat": 40.4644, "lon": 17.2470, "paese": "IT", "tipo": "citta"}
     }
+
+## Perché una persona o un partito non ha l'immagine? `diagnosi_entita.py`
+
+    python diagnosi_entita.py "Giorgia Meloni" --tipo persona --descrizione "presidente del Consiglio"
+    python diagnosi_entita.py "Partito Democratico" --tipo partito
+
+Mostra i candidati di Wikidata con punteggio o motivo dello scarto, quello scelto, le immagini candidate
+(persone: P18, anche più d'una; loghi: P154) e la licenza di ciascuna con l'esito ammessa/rifiutata.
+Le stesse informazioni finiscono in `logs/wikidata.log` ("candidato per ...", "Immagine ... scartata: licenza non ammessa: ...").
+
+Cause tipiche e rimedi:
+- **Licenza non ammessa** (molti loghi di partito e foto istituzionali non sono CC BY/CC0/pubblico dominio):
+  se dopo averla letta decidi che per te va bene, aggiungi un'espressione in `config.LICENZE_EXTRA_AMMESSE`,
+  per esempio `[r"iodl"]`. Se la prima immagine non va, si prova automaticamente la successiva (fino a 3).
+- **Nome abbreviato** ("Meloni", "Pd"): Claude ora scrive sempre il nome completo e ufficiale nel campo `nome`.
+- **Omonimi**: il più noto vince grazie al bonus di notorietà (+1 per ogni raddoppio dei sitelinks oltre 10).
+- **Nessuna immagine su Wikidata** per quell'entità: la scheda compare comunque, con un riquadro testuale.
+- **Entità sbagliata o non trovata**: forza il QID giusto in `data/entita_override.json`.

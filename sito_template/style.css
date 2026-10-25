@@ -55,7 +55,7 @@ footer{color:var(--mut);font-size:.8rem}
 .citati{display:flex;flex-wrap:wrap;gap:.4rem;min-height:3.4rem;align-content:flex-start}
 .carta{display:flex;align-items:center;gap:.5rem;margin:0;padding:.25rem .6rem .25rem .25rem;flex:1 1 9rem;max-width:16rem;min-width:0;
   background:var(--card);border:1px solid var(--bord);border-radius:.5rem;font-size:.8rem;line-height:1.25}
-.carta img,.carta-badge{width:2.8rem;height:2.8rem;flex:none;border-radius:.4rem;object-fit:cover}
+.carta img,.carta-badge{width:4rem;height:4rem;flex:none;border-radius:.4rem;object-fit:cover}
 .carta-badge{display:flex;align-items:center;justify-content:center;background:var(--acc);color:#fff;font-weight:700;font-size:1.1rem}
 .carta figcaption{display:flex;flex-direction:column;min-width:0}
 .carta strong,.carta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -75,9 +75,59 @@ footer{color:var(--mut);font-size:.8rem}
   .layout.con-visivo.testo-nascosto{grid-template-columns:minmax(0,1fr)}
   .layout.con-visivo .visivo{position:sticky;top:calc(var(--alt-player,5.5rem) + .5rem)}
   .mappa{height:clamp(280px,56vh,620px)}
-  .carta img,.carta-badge{width:3.4rem;height:3.4rem}
+  .carta img,.carta-badge{width:8rem;height:8rem}
 }
 .crediti{font-size:.8rem;color:var(--mut);margin:1.5rem 0}
 .crediti summary{cursor:pointer}
 footer p{margin:.3rem 0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+/* ---- schede: immagini adattate (loghi interi, persone ritagliate sul volto), descrizioni leggibili ---- */
+.carta{cursor:pointer;touch-action:manipulation}
+.carta img,.carta-badge{object-fit:cover;object-position:center 20%}
+.carta.logo img,.carta.logo .carta-badge{width:4.6rem;height:2.8rem;object-fit:contain;object-position:center;background:#fff;padding:.2rem;border:1px solid var(--bord)}
+.carta.logo .carta-badge{color:var(--fg);background:var(--card)}
+.carta strong,.carta figcaption span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;
+  white-space:normal;overflow:hidden;text-overflow:ellipsis;overflow-wrap:anywhere}
+.carta strong{-webkit-line-clamp:2;line-clamp:2}
+.carta figcaption span{color:var(--mut)}
+.carta.espansa{flex:1 1 100%;max-width:none;align-items:flex-start;display:flex!important}
+.carta.espansa strong,.carta.espansa figcaption span{-webkit-line-clamp:unset;line-clamp:unset;display:block}
+.carta:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+/* ---- mappa: etichette sui punti e dissolvenza fra due luoghi lontani ---- */
+.mappa{transition:opacity .26s ease}
+.mappa.dissolvenza{opacity:0}
+.leaflet-tooltip.etichetta-luogo{background:var(--bg);color:var(--fg);border:1px solid var(--bord);border-radius:.35rem;
+  box-shadow:none;font:600 .72rem/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;padding:.1rem .4rem;white-space:nowrap}
+.leaflet-tooltip.etichetta-luogo::before{display:none}
+.controlli label{display:inline-flex;align-items:center;gap:.35rem;font-size:.85rem}
+
+/* ---- palette pastello (selettore "Palette"). Ogni palette è un colore (--h, tinta) e una
+   saturazione (--k): le formule sotto ricavano da lì sfondo, testo, accenti, mappa, sia chiari sia scuri.
+   Senza data-palette resta il tema predefinito. ---- */
+:root[data-palette]{
+  --bg:hsl(var(--h) calc(55% * var(--k,1)) 96%);--fg:hsl(var(--h) 25% 13%);--mut:hsl(var(--h) 12% 34%);
+  --acc:hsl(var(--h) 55% 30%);--card:hsl(var(--h) calc(50% * var(--k,1)) 91%);--bord:hsl(var(--h) calc(30% * var(--k,1)) 78%);
+  --att:hsl(calc(var(--h) + 45) 95% 84%);
+  --map-bg:hsl(var(--h) calc(55% * var(--k,1)) 88%);--map-land:hsl(var(--h) calc(45% * var(--k,1)) 98%);
+  --map-line:hsl(var(--h) 22% 60%);--map-accent:hsl(var(--h) 60% 34%);color-scheme:light}
+@media (prefers-color-scheme:dark){:root[data-palette]:not([data-tema="chiaro"]){
+  --bg:hsl(var(--h) calc(20% * var(--k,1)) 11%);--fg:hsl(var(--h) 20% 90%);--mut:hsl(var(--h) 10% 67%);
+  --acc:hsl(var(--h) 70% 77%);--card:hsl(var(--h) calc(18% * var(--k,1)) 17%);--bord:hsl(var(--h) 14% 28%);
+  --att:hsl(calc(var(--h) + 45) 40% 25%);
+  --map-bg:hsl(var(--h) calc(24% * var(--k,1)) 13%);--map-land:hsl(var(--h) calc(16% * var(--k,1)) 22%);
+  --map-line:hsl(var(--h) 14% 38%);--map-accent:hsl(var(--h) 75% 72%);color-scheme:dark}}
+:root[data-palette][data-tema="scuro"]{
+  --bg:hsl(var(--h) calc(20% * var(--k,1)) 11%);--fg:hsl(var(--h) 20% 90%);--mut:hsl(var(--h) 10% 67%);
+  --acc:hsl(var(--h) 70% 77%);--card:hsl(var(--h) calc(18% * var(--k,1)) 17%);--bord:hsl(var(--h) 14% 28%);
+  --att:hsl(calc(var(--h) + 45) 40% 25%);
+  --map-bg:hsl(var(--h) calc(24% * var(--k,1)) 13%);--map-land:hsl(var(--h) calc(16% * var(--k,1)) 22%);
+  --map-line:hsl(var(--h) 14% 38%);--map-accent:hsl(var(--h) 75% 72%);color-scheme:dark}
+:root[data-palette="menta"]{--h:155}
+:root[data-palette="lavanda"]{--h:265}
+:root[data-palette="pesca"]{--h:22}
+:root[data-palette="cielo"]{--h:205}
+:root[data-palette="rosa"]{--h:335}
+:root[data-palette="limone"]{--h:52}
+:root[data-palette="salvia"]{--h:120;--k:.45}

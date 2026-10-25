@@ -19,7 +19,7 @@ def _claim(valore, rango="normal"):
 
 def _entita(etichetta, desc, p31, sitelinks, **claims):
     c = {"P31": [_claim({"id": q}) for q in p31]}
-    c.update({k: [_claim(v)] for k, v in claims.items()})
+    c.update({k: [_claim(x) for x in (v if isinstance(v, list) else [v])] for k, v in claims.items()})
     return {"labels": {"it": {"value": etichetta}}, "aliases": {}, "descriptions": {"it": {"value": desc}},
             "claims": c, "sitelinks": {f"site{i}": {} for i in range(sitelinks)}}
 
@@ -32,9 +32,11 @@ ENTITA = {
     "Q900005": _entita("Carla Gialli", "scrittrice", ["Q5"], 3),               # poco nota
     "Q900010": _entita("Partito Esempio", "partito politico", ["Q7278"], 20, P154="Logo Partito Esempio.svg", P465="1A73E8"),
     "Q900011": _entita("Azienda Orizzonte", "azienda", ["Q4830453"], 15, P154="Orizzonte logo.png"),
+    "Q900020": _entita("Giulia Famosa", "cantante", ["Q5"], 160, P18=["File A.jpg", "File B.jpg"]),   # molto nota; prima foto NC
+    "Q900021": _entita("Giulia Famosa", "calciatrice", ["Q5"], 12),                                   # omonima poco nota
     "Q900012": _entita("Banca Centrale Esempio", "istituzione finanziaria", ["Q327333"], 25),
 }
-RICERCA = {"Anna Verdi": ["Q900001"], "Luca Bianchi": ["Q900002", "Q900003"], "Paolo Neri": ["Q900004"],
+RICERCA = {"Giulia Famosa": ["Q900021", "Q900020"], "Anna Verdi": ["Q900001"], "Luca Bianchi": ["Q900002", "Q900003"], "Paolo Neri": ["Q900004"],
            "Carla Gialli": ["Q900005"], "Partito Esempio": ["Q900010"], "Azienda Orizzonte": ["Q900011"],
            "Banca Centrale Esempio": ["Q900012"]}
 
@@ -42,6 +44,8 @@ FILE_COMMONS = {   # nome file -> (estensione miniatura, licenza, autore)
     "Anna Verdi.jpg": ("jpg", "CC BY-SA 4.0", "<a href='https://x.example'>Fotografa Esempio</a>"),
     "Logo Partito Esempio.svg": ("png", "Public domain", "Autore Esempio"),
     "Orizzonte logo.png": ("png", "CC BY-NC 4.0", "Autore Non Commerciale"),
+    "File A.jpg": ("jpg", "CC BY-NC-SA 3.0", "Autore A"),
+    "File B.jpg": ("jpg", "Attribution", "Autore B"),
 }
 
 

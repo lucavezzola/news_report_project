@@ -109,6 +109,54 @@ const out = { errori };
   const mv = doc.getElementById("mostra-visivo"); mv.checked = false; mv.dispatchEvent(new w.Event("change"));
   out.senza_visivo = layout.classList.contains("senza-visivo");
   mv.checked = true; mv.dispatchEvent(new w.Event("change"));
+  // ---- mappa: etichette, storico tratteggiato e sbiadito, punto corrente pieno ----
+  const dati = JSON.parse(doc.getElementById("dati-visivi").textContent);
+  // ultimo istante della sezione Italia in cui il luogo corrente è un PUNTO (una città), con storico alle spalle
+  const kfIt = dati.mappa.filter((k) => k.sezione === "italia" && k.evidenzia.some((l) => !dati.luoghi[l].poligono));
+  vai(kfIt[kfIt.length - 1].t + 0.05);
+  const tracciati = [...doc.querySelectorAll("#mappa .leaflet-luoghi-pane path")];
+  const visibili = tracciati.filter((p) => parseFloat(p.getAttribute("stroke-opacity")) > 0);
+  const tratteggiati = visibili.filter((p) => p.getAttribute("stroke-dasharray"));
+  const pieni = visibili.filter((p) => !p.getAttribute("stroke-dasharray"));
+  out.mappa_pieni = pieni.length;                                       // il corrente: bordo solido
+  out.mappa_tratteggiati = tratteggiati.length;                         // lo storico: bordo tratteggiato
+  out.mappa_opacita_storico = tratteggiati.map((p) => parseFloat(p.getAttribute("stroke-opacity")));
+  out.etichette = [...doc.querySelectorAll("#mappa .etichetta-luogo")].map((e) => e.textContent);
+
+  // ---- carte: logo intero per i non-persona, descrizione completa espandibile e trattenuta ----
+  const frAnna = [...doc.querySelectorAll(".frase[data-entita]")][0];
+  vai(parseFloat(frAnna.getAttribute("data-inizio")) + 0.1);
+  let cartaAnna = doc.querySelector("#citati .carta");
+  out.carta_persona_logo = cartaAnna.classList.contains("logo");
+  out.carta_titolo_completo = cartaAnna.title.length > 90;              // la descrizione intera sta nel title
+  cartaAnna.click();
+  out.carta_espansa = cartaAnna.classList.contains("espansa") && cartaAnna.getAttribute("aria-expanded") === "true";
+  vai(0.0);                                                              // la frase è lontana: la carta fissata resta
+  out.carta_resta_se_fissata = doc.querySelectorAll("#citati .carta").length === 1;
+  doc.querySelector("#citati .carta").click();                           // si richiude: non più attuale, sparisce
+  out.carta_sparisce_dopo_chiusura = doc.querySelectorAll("#citati .carta").length === 0;
+  const frBanca = [...doc.querySelectorAll(".frase[data-entita]")].find((f) => f.textContent.includes("Banca Centrale"));
+  vai(parseFloat(frBanca.getAttribute("data-inizio")) + 0.1);
+  out.carta_istituzione_logo = doc.querySelector("#citati .carta").classList.contains("logo");
+
+  // ---- riproduzione in corso: il salto fra luoghi lontani non deve dare errori e deve concludersi ----
+  inPausa = false;
+  const kfEs = dati.mappa.filter((k) => k.sezione === "esteri" && k.evidenzia.length);
+  tempo = kfEs[0].t + 0.05; audio.dispatchEvent(new w.Event("timeupdate"));
+  await attendi(700);
+  tempo = kfEs[kfEs.length - 1].t + 0.05; audio.dispatchEvent(new w.Event("timeupdate"));
+  await attendi(700);
+  out.dissolvenza_conclusa = !doc.getElementById("mappa").classList.contains("dissolvenza");
+  inPausa = true;
+
+  // ---- palette ----
+  const sp = doc.getElementById("palette");
+  out.palette_opzioni = [...sp.options].map((o) => o.value);
+  sp.value = "menta"; sp.dispatchEvent(new w.Event("change"));
+  out.palette_menta = doc.documentElement.getAttribute("data-palette");
+  sp.value = "predefinita"; sp.dispatchEvent(new w.Event("change"));
+  out.palette_tolta = doc.documentElement.getAttribute("data-palette");
+
   // tema e dimensione testo
   const bt = doc.getElementById("tema"); bt.click();
   out.tema_dopo_clic = doc.documentElement.getAttribute("data-tema");

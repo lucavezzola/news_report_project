@@ -92,10 +92,33 @@ def test_stato_dipende_solo_dal_tempo_e_il_cumulo_e_corretto():
             continue
         k = kfs[st["indice"]]
         if k["cumula"]:
-            atteso = set()
-            for j in range(st["indice"]):
-                if kfs[j]["sezione"] == k["sezione"]:
-                    atteso.update(kfs[j]["evidenzia"])
-            assert set(st["citati"]) == atteso - set(st["attivi"])
+            # storico = keyframe consecutivi cumulativi della stessa sezione, fermandosi al primo che non cumula (reset)
+            atteso, j = [], st["indice"] - 1
+            while j >= 0 and kfs[j]["sezione"] == k["sezione"] and kfs[j]["cumula"]:
+                atteso += [l for l in kfs[j]["evidenzia"] if l not in atteso]
+                j -= 1
+            assert st["citati"] == [l for l in atteso if l not in st["attivi"]]      # stesso ordine: dal più recente
         else:
             assert st["citati"] == []
+
+
+def test_zoom_accumula_lo_storico_dentro_la_notizia_e_lo_azzera_a_fine_notizia():
+    s = sez("esteri", "zoom", [notizia("esteri-1", 0, 20, [(3, "parigi"), (8, "tokyo"), (13, "roma")]),
+                               notizia("esteri-2", 20, 40, [(25, "milano")])])
+    kfs, _ = mappa.calcola_keyframe([s], LUOGHI)
+    st = mappa.stato_a(kfs, 13.5)
+    assert st["attivi"] == ["roma"] and st["citati"] == ["tokyo", "parigi"]      # dal più recente al più vecchio
+    assert mappa.stato_a(kfs, 8.5)["citati"] == ["parigi"]
+    dopo = mappa.stato_a(kfs, 25.5)                                              # nuova notizia: storico azzerato
+    assert dopo["attivi"] == ["milano"] and dopo["citati"] == []
+
+
+def test_un_luogo_citato_di_nuovo_torna_corrente_e_esce_dallo_storico():
+    s = sez("italia", "fissa", [notizia("italia-1", 0, 30, [(3, "roma"), (9, "milano"), (15, "roma")])])
+    kfs, _ = mappa.calcola_keyframe([s], LUOGHI)
+    st = mappa.stato_a(kfs, 15.5)
+    assert st["attivi"] == ["roma"] and st["citati"] == ["milano"]
+
+
+def test_zoom_citta_non_troppo_alto():
+    assert config.MAPPA_ZOOM_CITTA <= 5 and config.MAPPA_ZOOM_MAX <= 6 and mappa.vista_luogo(LUOGHI["parigi"])["zoom"] == config.MAPPA_ZOOM_CITTA

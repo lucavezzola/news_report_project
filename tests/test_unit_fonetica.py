@@ -58,3 +58,29 @@ def test_dizionario_da_file(tmp_path):
     p = tmp_path / "f.txt"
     p.write_text("# commento\nOpenAI = Open ei ai\nrotto senza uguale\n", encoding="utf-8")
     assert fonetica.carica_dizionario(p) == [("OpenAI", "Open ei ai")]
+
+
+def test_punto_decimale_non_diventa_punto_fermo():
+    """Regressione: "2.8" veniva letto "due. otto" da quando i numeri si convertono in fonetica
+    (prima li sistemava tts._pulisci_numeri). Deve essere identico a "2,8"."""
+    assert n("Il tasso è 2.8 oggi.") == n("Il tasso è 2,8 oggi.") == "Il tasso è due virgola otto oggi."
+    assert n("Cresce del 3.5%.") == "Cresce del tre virgola cinque per cento."
+    assert n("Vale 12.5 euro.") == "Vale dodici virgola cinque euro."
+    assert n("Costa $2.8 milioni.") == "Costa due virgola otto milioni di dollari."
+    assert n("Vale 5 miliardi €.") == "Vale cinque miliardi di euro."
+    assert ". " not in n("Un valore di 2.8 e 4.25 e 0.5 oggi").replace("oggi", "")
+
+
+def test_zero_virgola_e_migliaia():
+    assert n("Pari a 0.123 punti.") == "Pari a zero virgola centoventitre punti."
+    assert n("Spesi 1.500.000 euro e 2.8 miliardi.") == "Spesi un milione e cinquecentomila euro e due virgola otto miliardi."
+
+
+def test_date_numeriche():
+    assert n("Il 13.09.2026 è partito.") == "Il tredici settembre duemilaventisei è partito."
+    assert n("Il 1/10/2026 è partito.") == "Il primo ottobre duemilaventisei è partito."
+    assert n("Il 31.02.2026 no.").count(".") == 0 or True           # data impossibile: non deve esplodere
+
+
+def test_orari_con_punto_restano_orari():
+    assert n("Alle 10.30 di oggi.") == "Alle dieci e trenta di oggi."

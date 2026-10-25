@@ -37,6 +37,7 @@ log = configura_logger("sito", "sito.log")
 
 _RE_DATA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _RE_IMG = re.compile(r"^img/[A-Za-z0-9_.-]+$")
+TIPI_ENTITA = ("persona", "partito", "azienda", "istituzione", "paese", "organizzazione", "altro")
 FILE_STATICI = ("style.css", "app.js", "mappa_logica.js", "mappa.js", "citati.js")
 
 
@@ -86,7 +87,9 @@ def prepara_dati_visivi(manifest, immagini_presenti):
     for eid, e in manifest.get("entita", {}).items():
         img = e.get("immagine") if e.get("immagine") in immagini_presenti and _RE_IMG.match(e.get("immagine") or "") else None
         col = e.get("colore") if re.fullmatch(r"[0-9A-Fa-f]{6}", e.get("colore") or "") else None
-        entita[eid] = {"nome": str(e["nome"])[:80], "descrizione": str(e.get("descrizione") or "")[:80],
+        tipo = e.get("tipo") if e.get("tipo") in TIPI_ENTITA else "altro"
+        # descrizione COMPLETA (fino a 400 caratteri): nelle carte viene accorciata a video ma si può espandere
+        entita[eid] = {"nome": str(e["nome"])[:120], "tipo": tipo, "descrizione": str(e.get("descrizione") or "")[:400],
                        "immagine": img, "colore": col}
         c = e.get("crediti")
         if img and c:
@@ -106,7 +109,7 @@ def prepara_dati_visivi(manifest, immagini_presenti):
     if not entita and not manifest.get("mappa"):
         return None, []
     dati = {"base": "../", "entita": entita, "max_carte": config.ENTITA_MAX_CONTEMPORANEE,
-            "durata_carte": config.ENTITA_DURATA_DOPO_S}
+            "durata_carte": config.ENTITA_DURATA_DOPO_S, "zoom_max": float(config.MAPPA_ZOOM_MAX)}
     if manifest.get("mappa") and luoghi:
         dati["mappa"] = manifest["mappa"]
         dati["luoghi"] = luoghi

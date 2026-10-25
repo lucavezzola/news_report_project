@@ -133,6 +133,22 @@
     });
   }
 
+  // palette pastello: ogni palette è solo un valore dell'attributo data-palette (le formule sono nel CSS)
+  var PALETTE = ["menta", "lavanda", "pesca", "cielo", "rosa", "limone", "salvia"];
+  var selPalette = document.getElementById("palette");
+  function applicaPalette(p) {
+    if (PALETTE.indexOf(p) >= 0) radice.setAttribute("data-palette", p); else radice.removeAttribute("data-palette");
+    document.dispatchEvent(new CustomEvent("rassegna:tema"));      // la mappa rilegge i colori
+  }
+  if (selPalette) {
+    var pSalvata = leggi("palette");
+    selPalette.value = PALETTE.indexOf(pSalvata) >= 0 ? pSalvata : "predefinita";
+    selPalette.addEventListener("change", function () {
+      scrivi("palette", selPalette.value === "predefinita" ? "" : selPalette.value);
+      applicaPalette(selPalette.value);
+    });
+  }
+
   var zoom = parseFloat(leggi("zoom")) || 1;
   function applicaZoom(z) {
     zoom = Math.max(0.8, Math.min(1.6, Math.round(z * 100) / 100));

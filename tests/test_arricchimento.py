@@ -166,3 +166,34 @@ def test_potatura_cache(tmp_path):
     g.oggi = w.oggi = date(2099, 1, 1)                             # molto tempo dopo
     assert g.pota_cache() > 0 and w.pota_cache() > 0
     assert not (tmp_path / "img").exists() or list((tmp_path / "img").iterdir()) == []
+
+
+# ----------------------------------------------- politici e partiti non mostrati (v. segnalazione)
+def test_il_piu_noto_batte_l_omonimo_poco_noto(tmp_path):
+    """Due omonimi umani: prima il margine era di 1 punto e la scheda veniva rifiutata come 'ambigua'."""
+    assert wd_mod.bonus_notorieta(9) == 0 and wd_mod.bonus_notorieta(20) == 1 and wd_mod.bonus_notorieta(40) == 2
+    assert wd_mod.bonus_notorieta(160) == 4 and wd_mod.bonus_notorieta(5000) == 4
+    _, _, w = servizi(tmp_path)
+    scheda = w.risolvi({"nome": "Giulia Famosa", "tipo": "persona", "descrizione": "cantante"})
+    assert scheda["qid"] == "Q900020"
+
+
+def test_se_la_prima_immagine_ha_licenza_non_ammessa_si_prova_la_successiva(tmp_path):
+    _, _, w = servizi(tmp_path)
+    scheda = w.risolvi({"nome": "Giulia Famosa", "tipo": "persona", "descrizione": ""})
+    assert scheda["immagine"] == "Q900020.jpg" and scheda["crediti"]["file"] == "File B.jpg"
+    assert w.stats["immagini_licenza_rifiutata"] == 1
+
+
+def test_licenze_attribution_e_extra(monkeypatch):
+    assert wd_mod.licenza_ammessa("Attribution") and wd_mod.licenza_ammessa("Attribution-ShareAlike 3.0")
+    assert not wd_mod.licenza_ammessa("Attribution-NonCommercial 2.0")
+    assert not wd_mod.licenza_ammessa("IODL 2.0")
+    monkeypatch.setattr(config, "LICENZE_EXTRA_AMMESSE", [r"iodl"])
+    assert wd_mod.licenza_ammessa("IODL 2.0")
+
+
+def test_riassunto_candidati_spiega_gli_scarti():
+    righe = wd_mod.riassumi_candidati([cand("Q1", ["Mario Rossi"], ["Q43229"], 50), cand("Q2", ["Mario Rossi"], ["Q5"], 3)],
+                                      "Mario Rossi", "persona", "")
+    assert "non è un essere umano" in righe[0] and "notorietà insufficiente" in righe[1]

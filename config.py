@@ -423,8 +423,12 @@ CACHE_MAX_INUTILIZZO_GIORNI = 90   # voci di cache non usate da 90 giorni: potat
 # Mappa: keyframe
 MAPPA_FUSIONE_S = 2.0              # keyframe più vicini di così vengono fusi
 MAPPA_SPAN_MAX_GRADI = 25          # oltre, più luoghi nella stessa frase = movimenti sequenziali
-MAPPA_ZOOM_CITTA = 9
-MAPPA_ZOOM_LUOGO = 8
+# Senza tile di sfondo (solo poligoni semplificati) oltre zoom ~6 la mappa diventa un puntino su grigio:
+# 4,5 mostra la città dentro il suo paese e i vicini (da telefono ~22° di larghezza, da PC di più).
+# Valori Leaflet: 3 ≈ continente, 4,5 ≈ paese con i vicini, 6 ≈ regione, 9 ≈ puntino su sfondo vuoto.
+MAPPA_ZOOM_CITTA = 4.5
+MAPPA_ZOOM_LUOGO = 4.5
+MAPPA_ZOOM_MAX = 5.5               # tetto anche per i riquadri (bounds) di piccoli paesi o regioni
 
 # Entità: una persona (o organizzazione) compare solo se Wikidata la conferma
 # e ha almeno questo numero di sitelinks (soglia di notorietà, da calibrare).
@@ -434,6 +438,10 @@ MARGINE_PUNTEGGIO_ENTITA = 2       # distacco minimo dal secondo candidato
 ENTITA_MAX_CONTEMPORANEE = 3
 ENTITA_DURATA_DOPO_S = 4           # una carta resta ancora 4 s dopo la fine della frase
 IMMAGINE_LARGHEZZA_PX = 400
+# Licenze Commons aggiuntive da ammettere, come espressioni regolari sul nome breve della licenza
+# (minuscolo). Di default solo CC BY, CC BY-SA, CC0, pubblico dominio. Esempio, dopo aver letto
+# nei log "licenza non ammessa: 'IODL 2.0'" e aver valutato tu la licenza: [r"iodl"]
+LICENZE_EXTRA_AMMESSE = []
 
 # Classi Wikidata (valori di P31) coerenti con il tipo dichiarato da Claude.
 # Solo per "persona" la coerenza è obbligatoria (Q5 = essere umano); per gli
